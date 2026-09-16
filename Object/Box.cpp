@@ -37,9 +37,9 @@ void Box::Init()
 	m_Position = { 0.0f, 5.0f, 0.0f };
 	m_Scale = { 1.0f, 1.0f, 1.0f };
 
-	AddComponent<ModelRenderer>(this)->Load("asset\\model\\box.obj");
+	AddComponent<ModelRenderer>()->Load("asset\\model\\box.obj");
 
-	BoxCollider* collider = AddComponent<BoxCollider>(this);
+	BoxCollider* collider = AddComponent<BoxCollider>();
 	collider->SetSize({2.0f, 2.0f, 2.0f});
 	collider->SetOffset({ 0.0f, 1.0f, 0.0f });
 	collider->SetStatic(true);

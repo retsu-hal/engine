@@ -26,13 +26,13 @@
 void Bullet::Init()
 {
 	m_Layer = 1;
-	AddComponent<ModelRenderer>(this)->Load("asset\\model\\bullet.obj");
+	AddComponent<ModelRenderer>()->Load("asset\\model\\bullet.obj");
 
-	SphereCollider* collider = AddComponent<SphereCollider>(this);
+	SphereCollider* collider = AddComponent<SphereCollider>();
 	collider->SetRadius(0.3f);
 	collider->SetTrigger(true);
 
-	m_Rigidbody = AddComponent<Rigidbody>(this);
+	m_Rigidbody = AddComponent<Rigidbody>();
 	m_Rigidbody->SetUseGravity(false);
 	m_Rigidbody->SetUseGround(false);
 

@@ -160,7 +160,7 @@ void MeshField::Init()
     CreateShaderResourceView(Renderer::GetDevice(), image.GetImages(), image.GetImageCount(), metadata, &m_Texture);
     assert(m_Texture);
 
-    Audio* bgm = AddComponent<Audio>(this);
+    Audio* bgm = AddComponent<Audio>();
     bgm->Load("asset\\audio\\bgm.wav");
     //bgm->Play(true);
 }

@@ -108,6 +108,7 @@
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <AdditionalIncludeDirectories>$(ProjectDir)Frame;$(ProjectDir)Component;$(ProjectDir)Object;$(ProjectDir)Scene;$(ProjectDir);$(ProjectDir)ThirdParty\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -125,6 +126,7 @@
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <AdditionalIncludeDirectories>$(ProjectDir)Frame;$(ProjectDir)Component;$(ProjectDir)Object;$(ProjectDir)Scene;$(ProjectDir);$(ProjectDir)ThirdParty\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -132,6 +134,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\GM31_DX\Frame\EditorGUI.cpp" />
     <ClCompile Include="Frame\Gizmo.cpp" />
     <ClCompile Include="Frame\Input.cpp" />
     <ClCompile Include="Frame\Manager.cpp" />
@@ -174,6 +177,7 @@
     <ClCompile Include="ThirdParty\imgui\imgui_widgets.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\GM31_DX\Frame\EditorGUI.h" />
     <ClInclude Include="Frame\Component.h" />
     <ClInclude Include="Frame\GameObject.h" />
     <ClInclude Include="Frame\Gizmo.h" />

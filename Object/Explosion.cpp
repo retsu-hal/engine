@@ -24,10 +24,10 @@ void Explosion::Init()
 	m_Layer = 2;
 	m_Scale = Vector3(1.0f, 1.0f, 1.0f);
 
-	BillboardRenderer* renderer = AddComponent<BillboardRenderer>(this);
+	BillboardRenderer* renderer = AddComponent<BillboardRenderer>();
 	renderer->Load(L"asset\\texture\\Explosion.png");
 
 	//4×4分割、16コマ、60コマ/秒、再生後に破棄
-	AddComponent<SpriteAnimation>(this)->Setup(renderer, 4, 4, 16, 60.0f);
+	AddComponent<SpriteAnimation>()->Setup(renderer, 4, 4, 16, 60.0f);
 }
 

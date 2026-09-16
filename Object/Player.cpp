@@ -22,7 +22,7 @@ void Player::Init()
 	m_Speed = 50.0f;
 	m_jumpPower = 16.0f;
 
-	m_AnimationModel = AddComponent<AnimationModel>(this);
+	m_AnimationModel = AddComponent<AnimationModel>();
 	m_AnimationModel->Load("asset\\model\\Akai.fbx");
 	m_AnimationModel->LoadAnimation("asset\\model\\Akai_Idle.fbx", "Idle");
 	m_AnimationModel->LoadAnimation("asset\\model\\Akai_Run.fbx", "Run");
@@ -30,17 +30,17 @@ void Player::Init()
 	m_AnimationName = "Idle";
 	m_NextAnimationName = "Idle";
 	
-	CapsuleCollider*collider = AddComponent<CapsuleCollider>(this);
+	CapsuleCollider*collider = AddComponent<CapsuleCollider>();
 	collider->SetRadius(40.0f);
 	collider->SetHeight(180.0f);
 	collider->SetOffset({ 0.0f, 90.0f, 0.0f });
 
-	m_Rigidbody = AddComponent<Rigidbody>(this);
+	m_Rigidbody = AddComponent<Rigidbody>();
 	m_Rigidbody->SetGravity(40.0f);
 	m_Rigidbody->SetDrag(5.0f);
 
 	//SE
-	m_JumpSE = AddComponent<Audio>(this);
+	m_JumpSE = AddComponent<Audio>();
 	m_JumpSE->Load("asset\\audio\\wan.wav");
 
 	m_Shadow = Manager::AddGameObject<Shadow>();

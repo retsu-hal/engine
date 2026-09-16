@@ -47,16 +47,16 @@ void Enemy::Init()
 	m_Position = { 0.0f, 5.0f, 0.0f };
 	m_Scale = { 1.0f, 1.0f, 1.0f };
 
-	m_ModelRenderer = AddComponent<ModelRenderer>(this);
+	m_ModelRenderer = AddComponent<ModelRenderer>();
 	m_ModelRenderer->Load("asset\\model\\player.obj");
 
 
-	CapsuleCollider* collider = AddComponent<CapsuleCollider>(this);
+	CapsuleCollider* collider = AddComponent<CapsuleCollider>();
 	collider->SetRadius(0.5f);
 	collider->SetHeight(2.0f);
 	collider->SetOffset({ 0.0f, 1.0f, 0.0f });
 
-	m_Rigidbody = AddComponent<Rigidbody>(this);
+	m_Rigidbody = AddComponent<Rigidbody>();
 	m_Rigidbody->SetGravity(40.0f);
 	m_Rigidbody->SetDrag(5.0f);
 

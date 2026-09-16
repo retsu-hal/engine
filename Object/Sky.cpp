@@ -39,7 +39,7 @@ void Sky::Init()
 	m_Position = { 0.0f, 5.0f, 0.0f };
 	m_Scale = { 100.0f, 100.0f, 100.0f };
 
-	AddComponent<ModelRenderer>(this)->Load("asset\\model\\sky.obj");
+	AddComponent<ModelRenderer>()->Load("asset\\model\\sky.obj");
 
 }
 

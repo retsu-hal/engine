@@ -23,13 +23,13 @@
 void Tree::Init()
 {
 	m_Layer = 2;
-	BillboardRenderer* renderer = AddComponent<BillboardRenderer>(this);
+	BillboardRenderer* renderer = AddComponent<BillboardRenderer>();
 	renderer->Load(L"asset\\texture\\tree.png");
 	renderer->SetMode(BillboardMode::AxisY);		// Y軸だけ回転する
 	renderer->SetAnchorBottom(true);					// 足元を原点にする
 	renderer->SetSize(7.0f, 7.0f);
 
-	BoxCollider* collider = AddComponent<BoxCollider>(this);
+	BoxCollider* collider = AddComponent<BoxCollider>();
 	collider->SetSize({1.0f, 7.0f, 1.0f});
 	collider->SetOffset({ 0.0f, 3.5f, 0.0f });	
 	collider->SetStatic(true);

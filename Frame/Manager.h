@@ -28,13 +28,16 @@ public:
 	static float GetDeltaTime() { return m_DeltaTime; }
 	static void SetDeltaTime(float dt) { m_DeltaTime = dt; }
 
+	static const std::list<GameObject*>& GetAllGameObjects() { return m_GameObjects; }
+	static GameObject* FindGameObjectByID(unsigned int id);
+
 	template<typename T>
 	static T* AddGameObject()
 	{
 		T* gameObject = nullptr;
 		{
-			ScopedTimer timer(typeid(T).name());
 			gameObject = new T();
+			gameObject->SetName(TypeName(typeid(T).name()));	
 			gameObject->Init();
 		}
 		m_GameObjects.push_back(gameObject);
@@ -42,11 +45,8 @@ public:
 		return gameObject;
 	}
 
-	static void RemoveGameObject(GameObject* gameobject)
-	{
-		m_GameObjects.remove(gameobject);
-		delete gameobject;
-	}
+	// GameObject の完全な型が必要なので定義は cpp 側に置く
+	static void RemoveGameObject(GameObject* gameobject);
 
 	template<typename T>
 	static T* GetGameObject()

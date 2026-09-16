@@ -50,7 +50,7 @@ void FIELD::Init()
 		image.GetImageCount(), metadata, &m_Texture);
 	assert(m_Texture);//読み込み失敗時にダイアログを表示
 
-	Audio* bgm = AddComponent<Audio>(this);
+	Audio* bgm = AddComponent<Audio>();
 	bgm->Load("asset\\audio\\bgm.wav");
 	bgm->Play(true);
 }

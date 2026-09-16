@@ -11,6 +11,7 @@
 #include "TextureManager.h"
 #include "Collider.h"
 #include "Gizmo.h"
+#include "EditorGUI.h"
 
 
 //staticメンバー変数はcppで定義する必要がある
@@ -31,6 +32,21 @@ void Manager::Init()
 	ImGui::CreateContext();
 	ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 	ImGui::StyleColorsDark();
+
+	// 日本語フォント（assetに置いたフォントを優先し、なければWindows標準のメイリオを使う）
+	{
+		ImGuiIO& io = ImGui::GetIO();
+		const char* fontPath = "asset\\font\\NotoSansJP-VariableFont_wght.ttf";
+		if (GetFileAttributesA(fontPath) == INVALID_FILE_ATTRIBUTES)
+		{
+			fontPath = "C:\\Windows\\Fonts\\meiryo.ttc";
+		}
+
+		if (GetFileAttributesA(fontPath) != INVALID_FILE_ATTRIBUTES)
+		{
+			io.Fonts->AddFontFromFileTTF(fontPath, 18.0f);
+		}
+	}
 	ImGui_ImplWin32_Init(GetWindow());
 	ImGui_ImplDX11_Init(Renderer::GetDevice(), Renderer::GetDeviceContext());
 
@@ -76,10 +92,8 @@ void Manager::Update()
 	float  dt =GetDeltaTime();
 	Input::Update();
 
-#if _DEBUG
-	//F1でコライダー表示のON/OFF
+
 	if (Input::GetKeyTrigger(VK_F1)) Gizmo::SetEnable(!Gizmo::IsEnable());
-#endif
 
 
 	if (m_Scene != nullptr)	m_Scene->Update();
@@ -127,6 +141,7 @@ void Manager::Update()
 			m_NextScene = nullptr;
 		}
 	}
+	EditorGUI::Draw();
 };
 
 void Manager::Draw()
@@ -183,4 +198,20 @@ void Manager::Draw()
 
 
 	Renderer::End();
+}
+
+void Manager::RemoveGameObject(GameObject* gameobject)
+{
+	m_GameObjects.remove(gameobject);
+	delete gameobject;
+}
+
+GameObject* Manager::FindGameObjectByID(unsigned int id)
+{
+	if (id == 0) return nullptr;
+	for (GameObject* object : m_GameObjects)
+	{
+		if (object->GetID() == id && !object->IsDestroyed()) return object;
+	}
+	return nullptr;
 }

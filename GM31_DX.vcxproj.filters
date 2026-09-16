@@ -143,6 +143,9 @@
     <ClCompile Include="ThirdParty\imgui\imgui_widgets.cpp">
       <Filter>imgui</Filter>
     </ClCompile>
+    <ClCompile Include="..\GM31_DX\Frame\EditorGUI.cpp">
+      <Filter>Frame</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Frame\Gizmo.h">
@@ -277,6 +280,9 @@
     </ClInclude>
     <ClInclude Include="ThirdParty\imgui\imstb_truetype.h">
       <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\GM31_DX\Frame\EditorGUI.h">
+      <Filter>Frame</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
