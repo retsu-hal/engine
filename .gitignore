@@ -1,69 +1,26 @@
-# Prerequisites
-*.d
-
-# Compiled Object files
-*.slo
-*.lo
-*.o
-*.obj
-
-# Precompiled Headers
-*.gch
-*.pch
-
-# Linker files
+# Visual Studio
+.vs/
+x64/
+x86/
+Debug/
+Release/
+*.user
 *.ilk
-
-# Debugger Files
 *.pdb
-
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
-*.so.*
-
-
-# Fortran module files
-*.mod
-*.smod
-
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
-
-# Executables
-*.exe
-*.out
-*.app
-
-# Build directories
-build/
-Build/
-build-*/
-
-# CMake generated files
-CMakeFiles/
-CMakeCache.txt
-cmake_install.cmake
-Makefile
-install_manifest.txt
-compile_commands.json
-
-# Temporary files
-*.tmp
+*.idb
+*.iobj
+*.ipdb
+*.obj
+*.tlog
 *.log
-*.bak
-*.swp
+*.recipe
+*.exe
 
-# vcpkg
-vcpkg_installed/
+# シェーダーはビルド時に生成される
+*.cso
 
-# debug information files
-*.dwo
+# ImGuiのウィンドウ配置（個人設定）
+imgui.ini
 
-# test output & cache
-Testing/
-.cache/
+# モデルの .obj は必要なので除外しない
+!asset/**/*.obj
