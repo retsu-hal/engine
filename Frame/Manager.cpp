@@ -31,7 +31,6 @@ void Manager::Init()
 	ImGui::CreateContext();
 	ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 	ImGui::StyleColorsDark();
-	ImGui::StyleColorsDark();
 	ImGui_ImplWin32_Init(GetWindow());
 	ImGui_ImplDX11_Init(Renderer::GetDevice(), Renderer::GetDeviceContext());
 
