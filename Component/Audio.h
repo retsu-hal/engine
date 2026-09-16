@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include <string>
 
 #include <xaudio2.h>
 #include "Component.h"
@@ -16,6 +17,8 @@ private:
 	int						m_Length{};
 	int						m_PlayLength{};
 
+	std::string				m_FileName;	// 保存用
+
 
 public:
 	static void InitMaster();
@@ -27,6 +30,10 @@ public:
 
 	void Load(const char *FileName);
 	void Play(bool Loop = false);
+
+	void OnInspectorGUI() override;
+	void Serialize(nlohmann::json& data) const override;
+	void Deserialize(const nlohmann::json& data) override;
 
 
 };

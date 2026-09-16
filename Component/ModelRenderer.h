@@ -68,6 +68,8 @@ private:
 
 	const ShaderSet* m_Shader = nullptr;
 
+	std::string m_FileName;	// 保存用
+
 public:
 
 	static void Preload( const char *FileName );
@@ -82,4 +84,8 @@ public:
 	void SetFlash(bool Flash) { m_Flash = Flash; }
 
 	void SetShader(const char* vsFile, const char* psFile);
-};
+
+	void OnInspectorGUI() override;
+	void Serialize(nlohmann::json& data) const override;
+	void Deserialize(const nlohmann::json& data) override;
+};

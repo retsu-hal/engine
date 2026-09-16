@@ -20,5 +20,10 @@ public:
 	using Component::Component;
 
 	void Setup(BillboardRenderer* renderer, int divX, int divY, int frameCount, float fps, bool loop = false);
+	void Start() override;
 	void Update() override;
-};
+
+	void OnInspectorGUI() override;
+	void Serialize(nlohmann::json& data) const override;
+	void Deserialize(const nlohmann::json& data) override;
+};

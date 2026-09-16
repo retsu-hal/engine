@@ -14,6 +14,7 @@
 #include "EditorGUI.h"
 #include "EditorCamera.h"
 #include "ImGuizmo.h"
+#include "SceneSerializer.h"
 
 
 //staticメンバー変数はcppで定義する必要がある
@@ -261,4 +262,29 @@ void Manager::ReloadScene()
 		m_NextSceneFactory = m_SceneFactory;
 		m_ChangeSceneTime = 0.0f;
 	}
+}
+
+void Manager::LoadSceneFile(const std::string& path)
+{
+	if (m_NextScene != nullptr) return;
+	m_NextSceneFactory = [path]() -> Scene* { return new FileScene(path, false); };
+	m_NextScene = m_NextSceneFactory();
+	m_ChangeSceneTime = 0.0f;
+}
+
+void Manager::LoadSceneText(const std::string& text)
+{
+	if (m_NextScene != nullptr) return;
+	m_NextSceneFactory = [text]() -> Scene* { return new FileScene(text, true); };
+	m_NextScene = m_NextSceneFactory();
+	m_ChangeSceneTime = 0.0f;
+}
+
+GameObject* Manager::AddGameObjectInstance(GameObject* gameObject, const std::string& name)
+{
+	if (gameObject == nullptr) return nullptr;
+	gameObject->SetName(name);
+	gameObject->Init();
+	m_GameObjects.push_back(gameObject);
+	return gameObject;
 }

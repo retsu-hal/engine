@@ -8,6 +8,8 @@
 #include "EditorCamera.h"
 #include "Collider.h"
 #include "ImGuizmo.h"
+#include "SceneSerializer.h"
+#include "Registry.h"
 #include <typeinfo>
 #include <cstring>
 #include <cfloat>
@@ -27,6 +29,11 @@ float        EditorGUI::m_SceneMax[2] = { 0.0f, 0.0f };
 int          EditorGUI::m_GizmoOperation = 0;
 bool         EditorGUI::m_GizmoLocal = false;
 bool         EditorGUI::m_GizmoActive = false;
+std::string  EditorGUI::m_ScenePath = "asset\\scene\\GameScene.json";
+std::string  EditorGUI::m_PlaySnapshot;
+bool         EditorGUI::m_HasSnapshot = false;
+char         EditorGUI::m_SaveAsBuffer[260] = "";
+bool         EditorGUI::m_OpenSaveAsPopup = false;
 
 //=============================================================
 // 今シーンビューに映しているカメラの行列（止めている間はエディタカメラ、Play 中はゲームカメラ）
@@ -98,57 +105,159 @@ bool EditorGUI::ConsumeGameUpdate()
 }
 
 //=============================================================
+// ファイルメニュー（シーンの保存・読み込み）
+//=============================================================
+void EditorGUI::SaveScene(const std::string& path)
+{
+	CreateDirectoryA("asset\\scene", nullptr);	// なければ作る（あれば何もしない）
+
+	int skipped = SceneSerializer::SaveToFile(path);
+	if (skipped >= 0) m_ScenePath = path;
+	if (skipped > 0)
+	{
+		OutputDebugStringA("[Scene] 登録されていないオブジェクトは保存されていません（出力ウィンドウを確認）\n");
+	}
+}
+
+void EditorGUI::DrawFileMenu()
+{
+	ImGuiIO& io = ImGui::GetIO();
+
+	// Ctrl+S で上書き保存（Play 中は保存しない。動いている途中の状態が残ってしまうため）
+	bool canSave = (m_PlayState == PlayState::Edit);
+	if (canSave && io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_S, false) && !io.WantTextInput)
+	{
+		SaveScene(m_ScenePath);
+	}
+
+	if (ImGui::BeginMenu("ファイル"))
+	{
+		ImGui::TextDisabled("%s", m_ScenePath.c_str());
+		ImGui::Separator();
+
+		if (ImGui::MenuItem("シーンを保存", "Ctrl+S", false, canSave))
+		{
+			SaveScene(m_ScenePath);
+		}
+
+		if (ImGui::MenuItem("名前を付けて保存...", nullptr, false, canSave))
+		{
+			strncpy_s(m_SaveAsBuffer, m_ScenePath.c_str(), _TRUNCATE);
+			m_OpenSaveAsPopup = true;
+		}
+
+		// asset\scene にある .json を一覧にする
+		if (ImGui::BeginMenu("シーンを開く"))
+		{
+			WIN32_FIND_DATAA find;
+			HANDLE handle = FindFirstFileA("asset\\scene\\*.json", &find);
+			bool any = false;
+			if (handle != INVALID_HANDLE_VALUE)
+			{
+				do
+				{
+					any = true;
+					std::string path = std::string("asset\\scene\\") + find.cFileName;
+					if (ImGui::MenuItem(find.cFileName, nullptr, path == m_ScenePath))
+					{
+						m_PlayState = PlayState::Edit;	// 読み込んだら止めた状態にする
+						m_HasSnapshot = false;
+						m_SelectedID = 0;
+						m_ScenePath = path;
+						Manager::LoadSceneFile(path);
+					}
+				} while (FindNextFileA(handle, &find));
+				FindClose(handle);
+			}
+			if (!any) ImGui::TextDisabled("asset\\scene に .json がありません");
+			ImGui::EndMenu();
+		}
+
+		ImGui::EndMenu();
+	}
+
+	// 名前を付けて保存のダイアログ（メニューの中では開けないので外で開く）
+	if (m_OpenSaveAsPopup)
+	{
+		ImGui::OpenPopup("SaveSceneAs");
+		m_OpenSaveAsPopup = false;
+	}
+	if (ImGui::BeginPopupModal("SaveSceneAs", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		ImGui::Text("保存先（プロジェクトのフォルダからの相対パス）");
+		ImGui::SetNextItemWidth(400.0f);
+		ImGui::InputText("##path", m_SaveAsBuffer, sizeof(m_SaveAsBuffer));
+
+		if (ImGui::Button("保存", ImVec2(120.0f, 0.0f)))
+		{
+			SaveScene(m_SaveAsBuffer);
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("キャンセル", ImVec2(120.0f, 0.0f))) ImGui::CloseCurrentPopup();
+		ImGui::EndPopup();
+	}
+}
+
+//=============================================================
 // ツールバー（再生 / 一時停止 / 停止）
 //=============================================================
 void EditorGUI::DrawToolbar()
 {
 	if (!ImGui::BeginMainMenuBar()) return;
 
+	DrawFileMenu();
+
 	enum class Icon { Play, Pause, Stop };
 
 	// 記号のボタン（フォントに記号がなくても表示できるよう、図形で描く）
 	auto iconButton = [](const char* id, Icon icon, bool active, const char* tooltip) -> bool
+	{
+		float h = ImGui::GetFrameHeight();
+		ImVec2 size(h * 1.4f, h);
+
+		if (active) ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+		bool pressed = ImGui::Button(id, size);
+		if (active) ImGui::PopStyleColor();
+
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tooltip);
+
+		ImVec2 min = ImGui::GetItemRectMin();
+		ImVec2 max = ImGui::GetItemRectMax();
+		ImVec2 c((min.x + max.x) * 0.5f, (min.y + max.y) * 0.5f);
+		float r = h * 0.28f;	// 記号の大きさ
+		ImU32 color = ImGui::GetColorU32(ImGuiCol_Text);
+		ImDrawList* dl = ImGui::GetWindowDrawList();
+
+		switch (icon)
 		{
-			float h = ImGui::GetFrameHeight();
-			ImVec2 size(h * 1.4f, h);
-
-			if (active) ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
-			bool pressed = ImGui::Button(id, size);
-			if (active) ImGui::PopStyleColor();
-
-			if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tooltip);
-
-			ImVec2 min = ImGui::GetItemRectMin();
-			ImVec2 max = ImGui::GetItemRectMax();
-			ImVec2 c((min.x + max.x) * 0.5f, (min.y + max.y) * 0.5f);
-			float r = h * 0.28f;	// 記号の大きさ
-			ImU32 color = ImGui::GetColorU32(ImGuiCol_Text);
-			ImDrawList* dl = ImGui::GetWindowDrawList();
-
-			switch (icon)
-			{
-			case Icon::Play:	// ▶
-				dl->AddTriangleFilled(ImVec2(c.x - r * 0.8f, c.y - r), ImVec2(c.x - r * 0.8f, c.y + r), ImVec2(c.x + r, c.y), color);
-				break;
-			case Icon::Pause:	// ❚❚
-				dl->AddRectFilled(ImVec2(c.x - r * 0.8f, c.y - r), ImVec2(c.x - r * 0.25f, c.y + r), color);
-				dl->AddRectFilled(ImVec2(c.x + r * 0.25f, c.y - r), ImVec2(c.x + r * 0.8f, c.y + r), color);
-				break;
-			case Icon::Stop:	// ■
-				dl->AddRectFilled(ImVec2(c.x - r * 0.85f, c.y - r * 0.85f), ImVec2(c.x + r * 0.85f, c.y + r * 0.85f), color);
-				break;
-			}
-			return pressed;
-		};
+		case Icon::Play:	// ▶
+			dl->AddTriangleFilled(ImVec2(c.x - r * 0.8f, c.y - r), ImVec2(c.x - r * 0.8f, c.y + r), ImVec2(c.x + r, c.y), color);
+			break;
+		case Icon::Pause:	// ❚❚
+			dl->AddRectFilled(ImVec2(c.x - r * 0.8f, c.y - r), ImVec2(c.x - r * 0.25f, c.y + r), color);
+			dl->AddRectFilled(ImVec2(c.x + r * 0.25f, c.y - r), ImVec2(c.x + r * 0.8f, c.y + r), color);
+			break;
+		case Icon::Stop:	// ■
+			dl->AddRectFilled(ImVec2(c.x - r * 0.85f, c.y - r * 0.85f), ImVec2(c.x + r * 0.85f, c.y + r * 0.85f), color);
+			break;
+		}
+		return pressed;
+	};
 
 	// Unity のように中央に並べる
 	float h = ImGui::GetFrameHeight();
 	float groupWidth = h * 1.4f * 3.0f + ImGui::GetStyle().ItemSpacing.x * 2.0f;
 	ImGui::SetCursorPosX((ImGui::GetWindowWidth() - groupWidth) * 0.5f);
 
-	// ▶：止まっていれば再生
+	// ▶：止まっていれば再生。Play 中は押しても何もしない
 	if (iconButton("##Play", Icon::Play, m_PlayState == PlayState::Play, "再生"))
 	{
+		// 止まっている状態から再生するときは、今のシーンを覚えておく（Stop でこの状態に戻す）
+		if (m_PlayState == PlayState::Edit)
+		{
+			m_HasSnapshot = (SceneSerializer::SaveToText(m_PlaySnapshot) == 0);	// 保存できない物があれば使わない
+		}
 		m_PlayState = PlayState::Play;
 	}
 
@@ -164,7 +273,12 @@ void EditorGUI::DrawToolbar()
 	{
 		m_PlayState = PlayState::Edit;
 		m_StepFrames = 0;
-		Manager::ReloadScene();
+
+		// Play 前に覚えた状態があればそこへ戻す。なければシーンを最初から読み直す
+		if (m_HasSnapshot) Manager::LoadSceneText(m_PlaySnapshot);
+		else               Manager::ReloadScene();
+		m_HasSnapshot = false;
+		m_SelectedID = 0;
 	}
 
 	// 右端に状態と FPS
@@ -178,6 +292,7 @@ void EditorGUI::DrawToolbar()
 
 	ImGui::EndMainMenuBar();
 }
+
 //=============================================================
 // シーンビュー
 //=============================================================
@@ -265,6 +380,7 @@ void EditorGUI::DrawSceneView()
 	}
 	ImGui::End();
 }
+
 //=============================================================
 // 選択中のオブジェクトのギズモ（ImGuizmo）
 //=============================================================
@@ -448,6 +564,15 @@ void EditorGUI::DrawHierarchy()
 	ImVec2 rest = ImGui::GetContentRegionAvail();
 	if (rest.y < 20.0f) rest.y = 20.0f;
 	ImGui::InvisibleButton("##HierarchyEmpty", rest);
+
+	// 空いている場所を右クリック：オブジェクトを作る
+	bool createEmpty = false;
+	if (ImGui::BeginPopupContextItem("##HierarchyContext"))
+	{
+		if (ImGui::MenuItem("空のオブジェクトを作成")) createEmpty = true;
+		ImGui::EndPopup();
+	}
+
 	if (ImGui::BeginDragDropTarget())
 	{
 		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("GAMEOBJECT_ID"))
@@ -467,6 +592,14 @@ void EditorGUI::DrawHierarchy()
 		m_HasDrop = false;
 	}
 
+	if (createEmpty)
+	{
+		GameObject* object = Manager::CreateGameObject("GameObject");
+		if (EditorCamera::IsInitialized())	// カメラの少し前に置く
+			object->SetPosition(EditorCamera::GetPosition() + EditorCamera::GetForward() * 10.0f);
+		m_SelectedID = object->GetID();
+	}
+
 	ImGui::End();
 }
 
@@ -483,7 +616,14 @@ void EditorGUI::DrawNode(GameObject* object)
 	if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
 	{
 		m_SelectedID = object->GetID();
-		FocusObject(m_SelectedID);
+		FocusObject(m_SelectedID);	// Scene のカメラを寄せる
+	}
+
+	// 右クリック：削除（子も一緒に消える）
+	if (ImGui::BeginPopupContextItem())
+	{
+		if (ImGui::MenuItem("削除")) object->SetDestroy();
+		ImGui::EndPopup();
 	}
 
 	// ドラッグ元
@@ -589,6 +729,21 @@ void EditorGUI::DrawInspector()
 		ImGui::PopID();
 	}
 
+	// コンポーネントを追加（登録されているものを一覧から選ぶ）
+	ImGui::Separator();
+	if (ImGui::Button("Add Component", ImVec2(-1.0f, 0.0f))) ImGui::OpenPopup("AddComponentPopup");
+	if (ImGui::BeginPopup("AddComponentPopup"))
+	{
+		for (auto& pair : ComponentRegistry::GetAll())
+		{
+			if (ImGui::MenuItem(pair.first.c_str()))
+			{
+				object->AddComponentInstance(pair.second(object));
+			}
+		}
+		ImGui::EndPopup();
+	}
+
 	ImGui::End();
 }
 
@@ -640,7 +795,7 @@ void EditorGUI::FocusObject(unsigned int id)
 		radius = (boundsMax - boundsMin).length() * 0.5f;
 	}
 
-	// 大きい物ほど離れる。近すぎ・遠すぎは制限
+	// 大きい物ほど離れる（視野角 60 度に収まる距離の目安）。近すぎ・遠すぎは制限
 	float distance = radius * 2.5f;
 	if (distance < 3.0f)   distance = 3.0f;
 	if (distance > 200.0f) distance = 200.0f;

@@ -40,12 +40,12 @@ private:
 	const aiScene* m_AiScene = nullptr;
 	std::unordered_map<std::string, const aiScene*> m_Animation;
 
-	ID3D11Buffer**	m_VertexBuffer;
-	ID3D11Buffer**	m_IndexBuffer;
+	ID3D11Buffer**	m_VertexBuffer = nullptr;
+	ID3D11Buffer**	m_IndexBuffer = nullptr;
 
 	std::unordered_map<std::string, ID3D11ShaderResourceView*> m_Texture;
 
-	std::vector<DEFORM_VERTEX>* m_DeformVertex;//変形後頂点データ
+	std::vector<DEFORM_VERTEX>* m_DeformVertex = nullptr;//変形後頂点データ
 	std::unordered_map<std::string, BONE> m_Bone;//ボーンデータ（名前で参照）
 
 	//直近のUpdateでアニメーションチャンネルが見つかったボーン数（デバッグ用）
@@ -59,6 +59,10 @@ private:
 
 	ID3D11Buffer* m_BoneBuffer = nullptr;
 
+	// 保存用
+	std::string m_FileName;
+	std::vector<std::pair<std::string, std::string>> m_AnimationFiles;	// 名前, ファイル
+
 public:
 	using Component::Component;
 
@@ -71,10 +75,14 @@ public:
 
 	void SetShader(const char* vsFile, const char* psFile);
 
+	void OnInspectorGUI() override;
+	void Serialize(nlohmann::json& data) const override;
+	void Deserialize(const nlohmann::json& data) override;
+
 
 	//----- デバッグ用 -----
 	bool HasAnimation(const char* Name) const;
 	int  GetBoneNum() const { return (int)m_Bone.size(); }
 	int  GetMatchedBoneNum1() const { return m_MatchedBoneNum1; }
 	int  GetMatchedBoneNum2() const { return m_MatchedBoneNum2; }
-};
+};

@@ -30,6 +30,10 @@ public:
 	void  SetUseGround(bool use) { m_UseGround = use; }
 
 	bool  IsGrounded() const { return m_IsGrounded; }
+
+	void OnInspectorGUI() override;
+	void Serialize(nlohmann::json& data) const override;
+	void Deserialize(const nlohmann::json& data) override;
 	float GetGroundHeight() const { return m_GroundHeight; }
 };
 

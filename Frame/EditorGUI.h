@@ -1,5 +1,7 @@
 ﻿#pragma once
 
+#include <string>
+
 class GameObject;
 struct ImDrawList;
 
@@ -32,15 +34,22 @@ private:
 	static bool        m_GizmoLocal;		// true:ローカル座標 false:ワールド座標
 	static bool        m_GizmoActive;		// ギズモにマウスが乗っている／ドラッグ中
 
+	static std::string m_ScenePath;			// 今のシーンファイル（Ctrl+S の保存先）
+	static std::string m_PlaySnapshot;		// Play を押す直前のシーン（Stop で戻す）
+	static bool        m_HasSnapshot;
+	static char        m_SaveAsBuffer[260];
+	static bool        m_OpenSaveAsPopup;
+
 	static void DrawToolbar();
+	static void DrawFileMenu();
+	static void SaveScene(const std::string& path);
 	static void DrawTransformGizmo();
 	static void PickObject();
+	static void FocusObject(unsigned int id);
 	static void DrawSceneView();
 	static void DrawHierarchy();
 	static void DrawNode(GameObject* object);
 	static void DrawInspector();
-
-	static void FocusObject(unsigned int id);
 
 public:
 	static void Draw();		// ImGui::NewFrame と ImGui::Render の間で呼ぶ

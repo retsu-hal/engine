@@ -16,6 +16,8 @@ public:
 	void Start() override;
 	void Update() override;
 	void OnInspectorGUI() override;
+	void Serialize(nlohmann::json& data) const override;
+	void Deserialize(const nlohmann::json& data) override;
 
 	void AddDamage(int damage);
 };

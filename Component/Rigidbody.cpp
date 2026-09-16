@@ -13,6 +13,8 @@
 //インクルード
 //==============================================================================
 #include "main.h"
+#include "JsonUtil.h"
+#include "Registry.h"
 #include "Renderer.h"
 #include "Manager.h"
 #include "GameObject.h"
@@ -81,3 +83,31 @@ void Rigidbody::OnPushed(const Vector3& push)
 		}
 	}
 }
+
+void Rigidbody::OnInspectorGUI()
+{
+	ImGui::DragFloat("Gravity", &m_Gravity, 0.1f);
+	ImGui::DragFloat("Drag", &m_Drag, 0.1f);
+	ImGui::Checkbox("Use Gravity", &m_UseGravity);
+	ImGui::SameLine();
+	ImGui::Checkbox("Use Ground", &m_UseGround);
+	ImGui::Text("Velocity: (%.2f, %.2f, %.2f)  Grounded: %s", m_Velocity.x, m_Velocity.y, m_Velocity.z, m_IsGrounded ? "true" : "false");
+}
+
+void Rigidbody::Serialize(nlohmann::json& data) const
+{
+	data["gravity"] = m_Gravity;
+	data["drag"] = m_Drag;
+	data["useGravity"] = m_UseGravity;
+	data["useGround"] = m_UseGround;
+}
+
+void Rigidbody::Deserialize(const nlohmann::json& data)
+{
+	JsonRead(data, "gravity", m_Gravity);
+	JsonRead(data, "drag", m_Drag);
+	JsonRead(data, "useGravity", m_UseGravity);
+	JsonRead(data, "useGround", m_UseGround);
+}
+
+REGISTER_COMPONENT(Rigidbody)

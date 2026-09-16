@@ -216,3 +216,6 @@ void Particle::Draw()
 	Renderer::SetDepthEnable(true);	//深度バッファを有効
 	Renderer::SetAddEnable(false);		//加算合成を無効
 }
+
+#include "Registry.h"
+REGISTER_GAMEOBJECT(Particle)

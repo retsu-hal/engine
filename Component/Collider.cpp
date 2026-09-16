@@ -1,4 +1,6 @@
 ﻿#include "main.h"
+#include "JsonUtil.h"
+#include "Registry.h"
 #include <algorithm>
 #include <typeinfo>
 #include "GameObject.h"
@@ -147,8 +149,6 @@ void Collider::Check()
 	//当たり表示（Gizmoの色分け用）は毎フレーム作り直す
 	for (Collider* collider : list) collider->m_Hit = false;
 
-
-
 	for (size_t i = 0; i < list.size(); i++)
 	{
 		for (size_t j = i + 1; j < list.size(); j++)
@@ -227,6 +227,93 @@ void Collider::DrawGizmo()
 			Gizmo::DrawWireBox(shape.Center, Vector3(shape.HalfX, shape.HalfY, shape.HalfZ), color);
 		}
 
+		//どのオブジェクトのコライダーか分かるように名前を出す（"class Player" の class を取る）
 		Gizmo::DrawLabel(shape.Center, collider->m_GameObject->GetName().c_str(), color);
 	}
 }
+
+//=============================================================
+// Inspector・保存
+//=============================================================
+void Collider::OnInspectorGUI()
+{
+	ImGui::DragFloat3("Offset", &m_Offset.x, 0.05f);
+	ImGui::Checkbox("Trigger", &m_IsTrigger);
+	ImGui::SameLine();
+	ImGui::Checkbox("Static", &m_IsStatic);
+}
+
+void Collider::Serialize(nlohmann::json& data) const
+{
+	data["offset"] = ToJson(m_Offset);
+	data["trigger"] = m_IsTrigger;
+	data["static"] = m_IsStatic;
+}
+
+void Collider::Deserialize(const nlohmann::json& data)
+{
+	JsonRead(data, "offset", m_Offset);
+	JsonRead(data, "trigger", m_IsTrigger);
+	JsonRead(data, "static", m_IsStatic);
+}
+
+void SphereCollider::OnInspectorGUI()
+{
+	Collider::OnInspectorGUI();
+	ImGui::DragFloat("Radius", &m_Radius, 0.01f, 0.0f, 1000.0f);
+}
+
+void SphereCollider::Serialize(nlohmann::json& data) const
+{
+	Collider::Serialize(data);
+	data["radius"] = m_Radius;
+}
+
+void SphereCollider::Deserialize(const nlohmann::json& data)
+{
+	Collider::Deserialize(data);
+	JsonRead(data, "radius", m_Radius);
+}
+
+void BoxCollider::OnInspectorGUI()
+{
+	Collider::OnInspectorGUI();
+	ImGui::DragFloat3("Size", &m_Size.x, 0.05f, 0.0f, 1000.0f);
+}
+
+void BoxCollider::Serialize(nlohmann::json& data) const
+{
+	Collider::Serialize(data);
+	data["size"] = ToJson(m_Size);
+}
+
+void BoxCollider::Deserialize(const nlohmann::json& data)
+{
+	Collider::Deserialize(data);
+	JsonRead(data, "size", m_Size);
+}
+
+void CapsuleCollider::OnInspectorGUI()
+{
+	Collider::OnInspectorGUI();
+	ImGui::DragFloat("Radius", &m_Radius, 0.01f, 0.0f, 1000.0f);
+	ImGui::DragFloat("Height", &m_Height, 0.01f, 0.0f, 1000.0f);
+}
+
+void CapsuleCollider::Serialize(nlohmann::json& data) const
+{
+	Collider::Serialize(data);
+	data["radius"] = m_Radius;
+	data["height"] = m_Height;
+}
+
+void CapsuleCollider::Deserialize(const nlohmann::json& data)
+{
+	Collider::Deserialize(data);
+	JsonRead(data, "radius", m_Radius);
+	JsonRead(data, "height", m_Height);
+}
+
+REGISTER_COMPONENT(SphereCollider)
+REGISTER_COMPONENT(BoxCollider)
+REGISTER_COMPONENT(CapsuleCollider)

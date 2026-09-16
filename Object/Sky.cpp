@@ -54,3 +54,6 @@ void Sky::Update()
 
 	GameObject::Update();
 }
+
+#include "Registry.h"
+REGISTER_GAMEOBJECT(Sky)

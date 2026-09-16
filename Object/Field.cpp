@@ -122,3 +122,6 @@ void FIELD::Draw()
 	//描画
 	Renderer::GetDeviceContext()->Draw(4, 0);
 }
+
+#include "Registry.h"
+REGISTER_GAMEOBJECT(FIELD)

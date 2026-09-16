@@ -202,3 +202,6 @@ void Shadow::Draw()
 	Renderer::GetDeviceContext()->RSSetState(prevRasterState);
 	if (prevRasterState)	prevRasterState->Release();
 }
+
+#include "Registry.h"
+REGISTER_GAMEOBJECT(Shadow)

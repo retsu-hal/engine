@@ -1,5 +1,7 @@
 ﻿
 #include "main.h"
+#include "JsonUtil.h"
+#include "Registry.h"
 #include "Audio.h"
 
 
@@ -40,6 +42,8 @@ void Audio::UninitMaster()
 
 void Audio::Load(const char *FileName)
 {
+	m_FileName = FileName;
+
 
 	// サウンドデータ読込
 	WAVEFORMATEX wfx = { 0 };
@@ -103,6 +107,7 @@ void Audio::Load(const char *FileName)
 
 void Audio::Uninit()
 {
+	if (m_SourceVoice == nullptr) return;	// 音を読み込まずに付けたとき
 	m_SourceVoice->Stop();
 	m_SourceVoice->DestroyVoice();
 
@@ -115,6 +120,8 @@ void Audio::Uninit()
 
 void Audio::Play(bool Loop)
 {
+	if (m_SourceVoice == nullptr) return;
+
 	m_SourceVoice->Stop();
 	m_SourceVoice->FlushSourceBuffers();
 
@@ -150,5 +157,22 @@ void Audio::Play(bool Loop)
 
 }
 
+void Audio::OnInspectorGUI()
+{
+	ImGui::Text("Sound: %s", m_FileName.c_str());
+	if (ImGui::Button("Play")) Play();
+}
 
+void Audio::Serialize(nlohmann::json& data) const
+{
+	data["sound"] = m_FileName;
+}
 
+void Audio::Deserialize(const nlohmann::json& data)
+{
+	std::string fileName;
+	JsonRead(data, "sound", fileName);
+	if (!fileName.empty()) Load(fileName.c_str());
+}
+
+REGISTER_COMPONENT(Audio)

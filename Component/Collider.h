@@ -39,6 +39,10 @@ public:
 
 	virtual ColliderShape GetShape() const = 0;	//形ごとに実装
 
+	void OnInspectorGUI() override;
+	void Serialize(nlohmann::json& data) const override;
+	void Deserialize(const nlohmann::json& data) override;
+
 	static void Check();		//全コライダーの当たり判定
 	static void DrawGizmo();	//全コライダーの形をデバッグ表示（ImGui::NewFrame と Gizmo::Draw の間で呼ぶ）
 };
@@ -54,6 +58,9 @@ public:
 
 	void SetRadius(float radius) { m_Radius = radius; }
 	ColliderShape GetShape() const override;
+	void OnInspectorGUI() override;
+	void Serialize(nlohmann::json& data) const override;
+	void Deserialize(const nlohmann::json& data) override;
 };
 
 //箱（回転しない）
@@ -67,6 +74,9 @@ public:
 
 	void SetSize(const Vector3& size) { m_Size = size; }
 	ColliderShape GetShape() const override;
+	void OnInspectorGUI() override;
+	void Serialize(nlohmann::json& data) const override;
+	void Deserialize(const nlohmann::json& data) override;
 };
 
 //カプセル（縦向き）
@@ -82,5 +92,8 @@ public:
 	void SetRadius(float radius) { m_Radius = radius; }
 	void SetHeight(float height) { m_Height = height; }
 	ColliderShape GetShape() const override;
+	void OnInspectorGUI() override;
+	void Serialize(nlohmann::json& data) const override;
+	void Deserialize(const nlohmann::json& data) override;
 };
 

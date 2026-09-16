@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "Component.h"
+#include <string>
 
 struct ShaderSet;
 
@@ -24,6 +25,8 @@ private:
 	XMFLOAT4 m_Color = { 1.0f, 1.0f, 1.0f, 1.0f };
 	XMFLOAT4 m_UV = { 0.0f, 0.0f, 1.0f, 1.0f };	// u, v, 幅, 高さ
 
+	std::wstring m_TextureFile;	// 保存用
+
 public:
 	using Component::Component;	// Component(GameObject*) を引き継ぐ
 
@@ -37,4 +40,8 @@ public:
 	void SetATC(bool enable) { m_UseATC = enable; }
 	void SetColor(const XMFLOAT4& color) { m_Color = color; }
 	void SetUV(float u, float v, float w, float h) { m_UV = { u, v, w, h }; }
-};
+
+	void OnInspectorGUI() override;
+	void Serialize(nlohmann::json& data) const override;
+	void Deserialize(const nlohmann::json& data) override;
+};

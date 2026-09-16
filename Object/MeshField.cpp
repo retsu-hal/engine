@@ -300,3 +300,6 @@ float MeshField::GetHeight(Vector3 position)
 
     return py;
 }
+
+#include "Registry.h"
+REGISTER_GAMEOBJECT(MeshField)

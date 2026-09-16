@@ -1,0 +1,597 @@
+{
+  "objects": [
+    {
+      "class": "GameObject",
+      "components": [
+        {
+          "anchorBottom": true,
+          "atc": false,
+          "color": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "enabled": true,
+          "height": 7.0,
+          "mode": 1,
+          "texture": "asset\\texture\\tree.png",
+          "type": "BillboardRenderer",
+          "uv": [
+            0.0,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "width": 7.0
+        },
+        {
+          "enabled": true,
+          "offset": [
+            0.0,
+            3.5,
+            0.0
+          ],
+          "size": [
+            1.0,
+            7.0,
+            1.0
+          ],
+          "static": true,
+          "trigger": false,
+          "type": "BoxCollider"
+        }
+      ],
+      "id": 205,
+      "layer": 2,
+      "name": "Tree",
+      "parent": 0,
+      "position": [
+        1.0,
+        0.0,
+        16.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "class": "GameObject",
+      "components": [
+        {
+          "anchorBottom": true,
+          "atc": false,
+          "color": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "enabled": true,
+          "height": 7.0,
+          "mode": 1,
+          "texture": "asset\\texture\\tree.png",
+          "type": "BillboardRenderer",
+          "uv": [
+            0.0,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "width": 7.0
+        },
+        {
+          "enabled": true,
+          "offset": [
+            0.0,
+            3.5,
+            0.0
+          ],
+          "size": [
+            1.0,
+            7.0,
+            1.0
+          ],
+          "static": true,
+          "trigger": false,
+          "type": "BoxCollider"
+        }
+      ],
+      "id": 209,
+      "layer": 2,
+      "name": "Tree",
+      "parent": 0,
+      "position": [
+        9.0,
+        0.0,
+        12.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "class": "GameObject",
+      "components": [
+        {
+          "enabled": true,
+          "life": 5,
+          "speed": 3.0,
+          "type": "EnemyController"
+        },
+        {
+          "enabled": true,
+          "model": "asset\\model\\player.obj",
+          "type": "ModelRenderer"
+        },
+        {
+          "enabled": true,
+          "height": 2.0,
+          "offset": [
+            0.0,
+            1.0,
+            0.0
+          ],
+          "radius": 0.5,
+          "static": false,
+          "trigger": false,
+          "type": "CapsuleCollider"
+        },
+        {
+          "drag": 5.0,
+          "enabled": true,
+          "gravity": 40.0,
+          "type": "Rigidbody",
+          "useGravity": true,
+          "useGround": true
+        }
+      ],
+      "id": 204,
+      "layer": 1,
+      "name": "Enemy",
+      "parent": 0,
+      "position": [
+        -7.708957195281982,
+        0.0,
+        1.9272392988204956
+      ],
+      "rotation": [
+        0.0,
+        -1.3258177042007446,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "class": "MeshField",
+      "id": 200,
+      "layer": 1,
+      "name": "MeshField",
+      "parent": 0,
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "class": "Score",
+      "id": 210,
+      "layer": 3,
+      "name": "Score",
+      "parent": 0,
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "class": "GameObject",
+      "components": [
+        {
+          "enabled": true,
+          "jumpPower": 16.0,
+          "speed": 50.0,
+          "type": "PlayerController"
+        },
+        {
+          "animations": [
+            {
+              "file": "asset\\model\\Akai_Idle.fbx",
+              "name": "Idle"
+            },
+            {
+              "file": "asset\\model\\Akai_Run.fbx",
+              "name": "Run"
+            }
+          ],
+          "enabled": true,
+          "model": "asset\\model\\Akai.fbx",
+          "type": "AnimationModel"
+        },
+        {
+          "enabled": true,
+          "height": 180.0,
+          "offset": [
+            0.0,
+            90.0,
+            0.0
+          ],
+          "radius": 40.0,
+          "static": false,
+          "trigger": false,
+          "type": "CapsuleCollider"
+        },
+        {
+          "drag": 5.0,
+          "enabled": true,
+          "gravity": 40.0,
+          "type": "Rigidbody",
+          "useGravity": true,
+          "useGround": true
+        },
+        {
+          "enabled": true,
+          "sound": "asset\\audio\\wan.wav",
+          "type": "Audio"
+        }
+      ],
+      "id": 202,
+      "layer": 1,
+      "name": "Player",
+      "parent": 0,
+      "position": [
+        0.0,
+        0.6000000238418579,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.009999999776482582,
+        0.009999999776482582,
+        0.009999999776482582
+      ]
+    },
+    {
+      "class": "Shadow",
+      "id": 203,
+      "layer": 2,
+      "name": "Shadow",
+      "parent": 202,
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.5,
+        1.5,
+        1.5
+      ]
+    },
+    {
+      "class": "GameObject",
+      "components": [
+        {
+          "anchorBottom": true,
+          "atc": false,
+          "color": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "enabled": true,
+          "height": 7.0,
+          "mode": 1,
+          "texture": "asset\\texture\\tree.png",
+          "type": "BillboardRenderer",
+          "uv": [
+            0.0,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "width": 7.0
+        },
+        {
+          "enabled": true,
+          "offset": [
+            0.0,
+            3.5,
+            0.0
+          ],
+          "size": [
+            1.0,
+            7.0,
+            1.0
+          ],
+          "static": true,
+          "trigger": false,
+          "type": "BoxCollider"
+        }
+      ],
+      "id": 208,
+      "layer": 2,
+      "name": "Tree",
+      "parent": 0,
+      "position": [
+        -9.0,
+        0.0,
+        -2.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "class": "GameObject",
+      "components": [
+        {
+          "enabled": true,
+          "model": "asset\\model\\box.obj",
+          "type": "ModelRenderer"
+        },
+        {
+          "enabled": true,
+          "offset": [
+            0.0,
+            1.0,
+            0.0
+          ],
+          "size": [
+            2.0,
+            2.0,
+            2.0
+          ],
+          "static": true,
+          "trigger": false,
+          "type": "BoxCollider"
+        }
+      ],
+      "id": 201,
+      "layer": 1,
+      "name": "Box",
+      "parent": 0,
+      "position": [
+        2.0,
+        0.0,
+        -3.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "class": "GameObject",
+      "components": [
+        {
+          "anchorBottom": true,
+          "atc": false,
+          "color": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "enabled": true,
+          "height": 7.0,
+          "mode": 1,
+          "texture": "asset\\texture\\tree.png",
+          "type": "BillboardRenderer",
+          "uv": [
+            0.0,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "width": 7.0
+        },
+        {
+          "enabled": true,
+          "offset": [
+            0.0,
+            3.5,
+            0.0
+          ],
+          "size": [
+            1.0,
+            7.0,
+            1.0
+          ],
+          "static": true,
+          "trigger": false,
+          "type": "BoxCollider"
+        }
+      ],
+      "id": 206,
+      "layer": 2,
+      "name": "Tree",
+      "parent": 0,
+      "position": [
+        18.0,
+        0.0,
+        -5.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "class": "GameObject",
+      "components": [
+        {
+          "anchorBottom": true,
+          "atc": false,
+          "color": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "enabled": true,
+          "height": 7.0,
+          "mode": 1,
+          "texture": "asset\\texture\\tree.png",
+          "type": "BillboardRenderer",
+          "uv": [
+            0.0,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "width": 7.0
+        },
+        {
+          "enabled": true,
+          "offset": [
+            0.0,
+            3.5,
+            0.0
+          ],
+          "size": [
+            1.0,
+            7.0,
+            1.0
+          ],
+          "static": true,
+          "trigger": false,
+          "type": "BoxCollider"
+        }
+      ],
+      "id": 207,
+      "layer": 2,
+      "name": "Tree",
+      "parent": 0,
+      "position": [
+        -13.0,
+        0.0,
+        -14.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "class": "CAMERA",
+      "id": 198,
+      "layer": 0,
+      "name": "CAMERA",
+      "parent": 0,
+      "position": [
+        0.0,
+        5.260000228881836,
+        -10.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "class": "Sky",
+      "id": 199,
+      "layer": 1,
+      "name": "Sky",
+      "parent": 0,
+      "position": [
+        0.0,
+        10.0,
+        -10.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        100.0,
+        100.0,
+        100.0
+      ]
+    }
+  ],
+  "version": 1
+}

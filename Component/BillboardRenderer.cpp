@@ -1,4 +1,6 @@
 ﻿#include "main.h"
+#include "JsonUtil.h"
+#include "Registry.h"
 #include "Renderer.h"
 #include "Manager.h"
 #include "GameObject.h"
@@ -9,6 +11,8 @@
 
 void BillboardRenderer::Load(const wchar_t* textureFile)
 {
+	m_TextureFile = textureFile;
+
 	m_Shader = ShaderManager::Load("shader\\unlitTextureVS.cso", "shader\\unlitTexturePS.cso");
 	m_Texture = TextureManager::Load(textureFile);
 
@@ -35,6 +39,8 @@ void BillboardRenderer::Uninit()
 
 void BillboardRenderer::Draw()
 {
+	if (m_VertexBuffer == nullptr || m_Texture == nullptr) return;	// テクスチャ未読み込み
+
 	CAMERA* camera = Manager::GetGameObject<CAMERA>();
 	if (camera == nullptr) return;
 
@@ -95,3 +101,45 @@ void BillboardRenderer::Draw()
 	context->Draw(4, 0);
 	if (m_UseATC) Renderer::SetATCEnable(false);
 }
+
+void BillboardRenderer::OnInspectorGUI()
+{
+	ImGui::Text("Texture: %s", WideToUtf8(m_TextureFile).c_str());
+	int mode = (int)m_Mode;
+	if (ImGui::Combo("Mode", &mode, "Full\0AxisY\0")) m_Mode = (BillboardMode)mode;
+	ImGui::DragFloat("Width", &m_Width, 0.05f);
+	ImGui::DragFloat("Height", &m_Height, 0.05f);
+	ImGui::Checkbox("Anchor Bottom", &m_AnchorBottom);
+	ImGui::ColorEdit4("Color", &m_Color.x);
+}
+
+void BillboardRenderer::Serialize(nlohmann::json& data) const
+{
+	data["texture"] = WideToUtf8(m_TextureFile);
+	data["mode"] = (int)m_Mode;
+	data["width"] = m_Width;
+	data["height"] = m_Height;
+	data["anchorBottom"] = m_AnchorBottom;
+	data["atc"] = m_UseATC;
+	data["color"] = ToJson(m_Color);
+	data["uv"] = ToJson(m_UV);
+}
+
+void BillboardRenderer::Deserialize(const nlohmann::json& data)
+{
+	std::string texture;
+	JsonRead(data, "texture", texture);
+	if (!texture.empty()) Load(Utf8ToWide(texture).c_str());
+
+	int mode = (int)m_Mode;
+	JsonRead(data, "mode", mode);
+	m_Mode = (BillboardMode)mode;
+	JsonRead(data, "width", m_Width);
+	JsonRead(data, "height", m_Height);
+	JsonRead(data, "anchorBottom", m_AnchorBottom);
+	JsonRead(data, "atc", m_UseATC);
+	JsonRead(data, "color", m_Color);
+	JsonRead(data, "uv", m_UV);
+}
+
+REGISTER_COMPONENT(BillboardRenderer)

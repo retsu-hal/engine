@@ -14,4 +14,6 @@ public:
 	void Update() override;
 	void OnCollision(GameObject* other) override;
 	void OnInspectorGUI() override;
+	void Serialize(nlohmann::json& data) const override;
+	void Deserialize(const nlohmann::json& data) override;
 };

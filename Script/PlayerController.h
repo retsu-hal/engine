@@ -12,6 +12,7 @@ private:
 	float m_Speed = 50.0f;
 	float m_JumpPower = 16.0f;
 	float m_HitTimer = 0.0f;	// 無敵時間
+	bool  m_Blinking = false;	// 点滅でモデルの Enabled を操作中か
 
 	// アニメーション（前のアニメから次のアニメへブレンドする）
 	std::string m_AnimationName = "Idle";
@@ -29,4 +30,6 @@ public:
 	void Update() override;
 	void OnCollision(GameObject* other) override;
 	void OnInspectorGUI() override;
+	void Serialize(nlohmann::json& data) const override;
+	void Deserialize(const nlohmann::json& data) override;
 };

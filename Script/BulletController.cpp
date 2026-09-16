@@ -1,5 +1,7 @@
 ﻿#include "main.h"
 #include "Renderer.h"
+#include "JsonUtil.h"
+#include "Registry.h"
 #include "Manager.h"
 #include "GameObject.h"
 #include "BulletController.h"
@@ -43,3 +45,15 @@ void BulletController::OnInspectorGUI()
 {
 	ImGui::DragFloat("Lifetime", &m_Lifetime, 0.01f);
 }
+
+void BulletController::Serialize(nlohmann::json& data) const
+{
+	data["lifetime"] = m_Lifetime;
+}
+
+void BulletController::Deserialize(const nlohmann::json& data)
+{
+	JsonRead(data, "lifetime", m_Lifetime);
+}
+
+REGISTER_COMPONENT(BulletController)

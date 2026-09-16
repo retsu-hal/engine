@@ -9,7 +9,8 @@
 #include "ModelRenderer.h"
 #include "ShaderManager.h"
 #include "GameObject.h"
-
+#include "JsonUtil.h"
+#include "Registry.h"
 
 
 std::unordered_map<std::string, MODEL*> ModelRenderer::m_ModelPool;
@@ -17,6 +18,8 @@ std::unordered_map<std::string, MODEL*> ModelRenderer::m_ModelPool;
 
 void ModelRenderer::Draw()
 {
+	if (m_Model == nullptr || m_Shader == nullptr) return;	// モデル未読み込み
+
 	m_Shader->Set();
 	Renderer::SetWorldMatrix(m_GameObject->GetWorldMatrix());
 
@@ -103,6 +106,8 @@ void ModelRenderer::UnloadAll()
 
 void ModelRenderer::Load(const char *FileName)
 {
+	m_FileName = FileName;
+
 	if (m_Shader == nullptr)
 		m_Shader = ShaderManager::Load("shader\\unlitTextureVS.cso", "shader\\unlitTexturePS.cso");
 
@@ -568,3 +573,21 @@ void ModelRenderer::LoadMaterial( const char *FileName, MODEL_MATERIAL **Materia
 	*MaterialNum = materialNum;
 }
 
+void ModelRenderer::OnInspectorGUI()
+{
+	ImGui::Text("Model: %s", m_FileName.c_str());
+}
+
+void ModelRenderer::Serialize(nlohmann::json& data) const
+{
+	data["model"] = m_FileName;
+}
+
+void ModelRenderer::Deserialize(const nlohmann::json& data)
+{
+	std::string fileName;
+	JsonRead(data, "model", fileName);
+	if (!fileName.empty()) Load(fileName.c_str());
+}
+
+REGISTER_COMPONENT(ModelRenderer)

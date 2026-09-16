@@ -189,6 +189,15 @@ public:
 
 	const std::list<Component*>& GetComponents() const { return m_Components; }
 
+	// 名前から作ったコンポーネントを付ける（シーン読み込み・Add Component 用）
+	Component* AddComponentInstance(Component* component)
+	{
+		if (component == nullptr) return nullptr;
+		component->Init();
+		m_Components.push_back(component);
+		return component;
+	}
+
 	virtual Vector3 GetForward()
 	{
 		XMMATRIX RotMatrix = XMMatrixRotationRollPitchYaw(m_Rotation.x, m_Rotation.y, m_Rotation.z);

@@ -58,6 +58,13 @@ public:
 	// 今のシーンを最初から読み込み直す
 	static void ReloadScene();
 
+	// シーンファイル（JSON）を読み込む／文字列の JSON から読み込む（Play 前の状態に戻すときに使う）
+	static void LoadSceneFile(const std::string& path);
+	static void LoadSceneText(const std::string& text);
+
+	// 名前から作ったオブジェクトを登録する（シーン読み込み用）
+	static GameObject* AddGameObjectInstance(GameObject* gameObject, const std::string& name);
+
 	// T 型のコンポーネントを持つ最初のものを探す（例: FindComponent<PlayerController>()）
 	template<typename T>
 	static T* FindComponent()

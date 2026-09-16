@@ -1,5 +1,7 @@
 ﻿#include "main.h"
 #include "Renderer.h"
+#include "JsonUtil.h"
+#include "Registry.h"
 #include "Manager.h"
 #include "GameObject.h"
 #include "EnemyController.h"
@@ -68,3 +70,17 @@ void EnemyController::OnInspectorGUI()
 	ImGui::DragFloat("Speed", &m_Speed, 0.1f);
 	ImGui::DragInt("Life", &m_Life);
 }
+
+void EnemyController::Serialize(nlohmann::json& data) const
+{
+	data["speed"] = m_Speed;
+	data["life"] = m_Life;
+}
+
+void EnemyController::Deserialize(const nlohmann::json& data)
+{
+	JsonRead(data, "speed", m_Speed);
+	JsonRead(data, "life", m_Life);
+}
+
+REGISTER_COMPONENT(EnemyController)

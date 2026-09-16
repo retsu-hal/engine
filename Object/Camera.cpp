@@ -56,3 +56,6 @@ void CAMERA::Draw()
 	
 	Renderer::SetViewMatrix(m_ViewMatrix);
 }
+
+#include "Registry.h"
+REGISTER_GAMEOBJECT(CAMERA)

@@ -1,5 +1,7 @@
 ﻿#include "main.h"
 #include "Renderer.h"
+#include "JsonUtil.h"
+#include "Registry.h"
 #include "Manager.h"
 #include "GameObject.h"
 #include "PlayerController.h"
@@ -85,7 +87,6 @@ void PlayerController::Update()
 	//------------------------------------------------------------
 	if (m_HitTimer > 0.0f) m_HitTimer -= dt;
 	if (m_HitTimer < 0.0f) m_HitTimer = 0.0f;
-	bool  m_Blinking = false;
 
 	// 点滅中だけ Enabled を操作する（常に上書きすると Inspector から切り替えられなくなる）
 	if (m_AnimationModel)
@@ -145,3 +146,17 @@ void PlayerController::OnInspectorGUI()
 	ImGui::Text("Hit Timer: %.2f", m_HitTimer);
 	ImGui::Text("Animation: %s -> %s (%.2f)", m_AnimationName.c_str(), m_NextAnimationName.c_str(), m_Blend);
 }
+
+void PlayerController::Serialize(nlohmann::json& data) const
+{
+	data["speed"] = m_Speed;
+	data["jumpPower"] = m_JumpPower;
+}
+
+void PlayerController::Deserialize(const nlohmann::json& data)
+{
+	JsonRead(data, "speed", m_Speed);
+	JsonRead(data, "jumpPower", m_JumpPower);
+}
+
+REGISTER_COMPONENT(PlayerController)

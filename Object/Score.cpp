@@ -244,3 +244,6 @@ void Score::Draw()
 		Renderer::GetDeviceContext()->Draw(4, i * 4);
 	}
 }
+
+#include "Registry.h"
+REGISTER_GAMEOBJECT(Score)

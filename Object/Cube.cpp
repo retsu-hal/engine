@@ -164,3 +164,6 @@ void CUBE::Draw()
 	//描画
 	Renderer::GetDeviceContext()->DrawIndexed(36, 0, 0);
 }
+
+#include "Registry.h"
+REGISTER_GAMEOBJECT(CUBE)

@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "nlohmann/json_fwd.hpp"	// json の前方宣言だけ（本体は重いので cpp 側で include する）
 
 class Component
 {
@@ -40,4 +41,9 @@ public:
 
 	// Inspector に表示する項目（各コンポーネントで上書きする）
 	virtual void OnInspectorGUI() {};
+
+	// シーンファイルへの保存・読み込み（保存したい値を各コンポーネントで書く）
+	// Deserialize は AddComponent（Init）の後に呼ばれる
+	virtual void Serialize(nlohmann::json& data) const {};
+	virtual void Deserialize(const nlohmann::json& data) {};
 };

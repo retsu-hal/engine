@@ -3,9 +3,13 @@
 #include "AnimationModel.h"
 #include "ShaderManager.h"
 #include "GameObject.h"
+#include "JsonUtil.h"
+#include "Registry.h"
 
 void AnimationModel::Draw()
 {
+	if (m_AiScene == nullptr) return;
+
 	m_Shader->Set();
 	Renderer::SetWorldMatrix(m_GameObject->GetWorldMatrix());
 
@@ -72,6 +76,8 @@ void AnimationModel::SetShader(const char* vsFile, const char* psFile)
 
 void AnimationModel::Load(const char* FileName)
 {
+	m_FileName = FileName;
+
 	if (m_Shader == nullptr)
 		m_Shader = ShaderManager::Load("shader\\SkinVS.cso", "shader\\unlitTexturePS.cso");
 
@@ -210,10 +216,9 @@ void AnimationModel::Load(const char* FileName)
 
 void AnimationModel::LoadAnimation(const char* FileName, const char* Name)
 {
-
+	m_AnimationFiles.push_back({ Name, FileName });
 	m_Animation[Name] = aiImportFile(FileName, aiProcess_ConvertToLeftHanded);
 	assert(m_Animation[Name]);
-
 }
 
 
@@ -236,6 +241,8 @@ void AnimationModel::CreateBone(aiNode* node)
 
 void AnimationModel::Uninit()
 {
+	if (m_AiScene == nullptr) return;	// モデルを読み込まずに付けた（Add Component した）とき
+
 	for (unsigned int m = 0; m < m_AiScene->mNumMeshes; m++)
 	{
 		m_VertexBuffer[m]->Release();
@@ -271,6 +278,7 @@ void AnimationModel::Update(const char* AnimationName1, int Frame1,
 	const char* AnimationName2, int Frame2, float Blend)
 {
 	// アニメーションがあるか確認
+	if (m_AiScene == nullptr) return;
 	if (m_Animation.count(AnimationName1) == 0)
 		return;
 
@@ -400,3 +408,39 @@ void AnimationModel::UpdateBoneMatrix(aiNode* node, aiMatrix4x4 matrix)
 	}
 
 }
+
+void AnimationModel::OnInspectorGUI()
+{
+	ImGui::Text("Model: %s", m_FileName.c_str());
+	for (auto& animation : m_AnimationFiles)
+		ImGui::BulletText("%s : %s", animation.first.c_str(), animation.second.c_str());
+}
+
+void AnimationModel::Serialize(nlohmann::json& data) const
+{
+	data["model"] = m_FileName;
+	json animations = json::array();
+	for (auto& animation : m_AnimationFiles)
+		animations.push_back({ { "name", animation.first }, { "file", animation.second } });
+	data["animations"] = animations;
+}
+
+void AnimationModel::Deserialize(const nlohmann::json& data)
+{
+	std::string fileName;
+	JsonRead(data, "model", fileName);
+	if (fileName.empty()) return;
+	Load(fileName.c_str());
+
+	if (data.contains("animations"))
+	{
+		for (const json& animation : data["animations"])
+		{
+			std::string name = animation.value("name", "");
+			std::string file = animation.value("file", "");
+			if (!name.empty() && !file.empty()) LoadAnimation(file.c_str(), name.c_str());
+		}
+	}
+}
+
+REGISTER_COMPONENT(AnimationModel)
