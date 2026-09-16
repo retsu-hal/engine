@@ -35,9 +35,9 @@ void EditorCamera::Update(bool sceneViewHovered)
 
 	static bool dragging = false;
 
-	// シーンビューの上で右クリックしたときだけ操作を始める（他のウィンドウの操作と混ざらないように）
-	if (sceneViewHovered && ImGui::IsMouseClicked(ImGuiMouseButton_Right)) dragging = true;
-	if (!ImGui::IsMouseDown(ImGuiMouseButton_Right)) dragging = false;
+	// シーンビューの上で左クリックしたときだけ操作を始める（他のウィンドウの操作と混ざらないように）
+	if (sceneViewHovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) dragging = true;
+	if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) dragging = false;
 
 	Vector3 forward = GetForward();
 	Vector3 right = Vector3::cross(Vector3(0.0f, 1.0f, 0.0f), forward);

@@ -147,6 +147,8 @@ void Collider::Check()
 	//当たり表示（Gizmoの色分け用）は毎フレーム作り直す
 	for (Collider* collider : list) collider->m_Hit = false;
 
+
+
 	for (size_t i = 0; i < list.size(); i++)
 	{
 		for (size_t j = i + 1; j < list.size(); j++)
@@ -156,6 +158,7 @@ void Collider::Check()
 			GameObject* objA = a->m_GameObject;
 			GameObject* objB = b->m_GameObject;
 
+			if (!a->IsEnabled() || !b->IsEnabled()) continue;			//無効にしたコライダー
 			if (objA == objB) continue;									//同じオブジェクト同士
 			if (objA->IsDestroyed() || objB->IsDestroyed()) continue;	//消える予定のもの
 			if (a->m_IsStatic && b->m_IsStatic) continue;				//動かないもの同士
@@ -200,6 +203,7 @@ void Collider::DrawGizmo()
 	for (Collider* collider : m_List)
 	{
 		if (collider->m_GameObject->IsDestroyed()) continue;
+		if (!collider->IsEnabled()) continue;	//無効にしたコライダーは表示しない
 
 		ColliderShape shape = collider->GetShape();
 
@@ -223,9 +227,6 @@ void Collider::DrawGizmo()
 			Gizmo::DrawWireBox(shape.Center, Vector3(shape.HalfX, shape.HalfY, shape.HalfZ), color);
 		}
 
-		//どのオブジェクトのコライダーか分かるように名前を出す（"class Player" の class を取る）
-		const char* name = typeid(*collider->m_GameObject).name();
-		if (strncmp(name, "class ", 6) == 0) name += 6;
-		Gizmo::DrawLabel(shape.Center, name, color);
+		Gizmo::DrawLabel(shape.Center, collider->m_GameObject->GetName().c_str(), color);
 	}
 }

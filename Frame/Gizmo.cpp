@@ -60,14 +60,6 @@ void Gizmo::Uninit()
 //=============================================================
 void Gizmo::Draw()
 {
-#if _DEBUG
-	ImGui::Begin("Gizmo");
-	ImGui::Checkbox("Show (F1)", &m_Enable);
-	ImGui::SliderFloat("Thickness", &m_Thickness, 1.0f, 5.0f);
-	ImGui::Text("Lines: %d", (int)m_Lines.size());
-	ImGui::End();
-#endif
-
 	CAMERA* camera = Manager::GetGameObject<CAMERA>();
 	ImDrawList* drawList = EditorGUI::GetSceneDrawList();	//シーンビューのウィンドウに描く
 	bool useEditorCamera = EditorGUI::UseEditorCamera() && EditorCamera::IsInitialized();
