@@ -13,6 +13,7 @@
 #include "Gizmo.h"
 #include "EditorGUI.h"
 #include "EditorCamera.h"
+#include "ImGuizmo.h"
 
 
 //staticメンバー変数はcppで定義する必要がある
@@ -89,6 +90,7 @@ void Manager::Update()
 	ImGui_ImplDX11_NewFrame();
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
+	ImGuizmo::BeginFrame();
 
 	ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
 

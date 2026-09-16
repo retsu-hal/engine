@@ -13,6 +13,11 @@ private:
 	static float   m_MoveSpeed;
 	static bool    m_Initialized;
 
+	// フォーカス（選んだオブジェクトへ滑らかに寄る）
+	static bool    m_Focusing;
+	static Vector3 m_FocusTarget;
+	static float   m_FocusDistance;
+
 public:
 	// 最初にエディタカメラを使うとき、ゲームカメラと同じ場所から始める
 	static void InitFrom(const Vector3& position, const Vector3& target);
@@ -29,4 +34,7 @@ public:
 	static void Apply();
 
 	static void OnInspectorGUI();
+
+	// target を画面の中心に、distance 離れた位置へ寄る（向きはそのまま）
+	static void Focus(const Vector3& target, float distance);
 };

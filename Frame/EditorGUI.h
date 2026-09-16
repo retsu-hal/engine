@@ -28,11 +28,19 @@ private:
 	static float       m_SceneMin[2];
 	static float       m_SceneMax[2];
 
+	static int         m_GizmoOperation;	// 0:移動 1:回転 2:拡縮
+	static bool        m_GizmoLocal;		// true:ローカル座標 false:ワールド座標
+	static bool        m_GizmoActive;		// ギズモにマウスが乗っている／ドラッグ中
+
 	static void DrawToolbar();
+	static void DrawTransformGizmo();
+	static void PickObject();
 	static void DrawSceneView();
 	static void DrawHierarchy();
 	static void DrawNode(GameObject* object);
 	static void DrawInspector();
+
+	static void FocusObject(unsigned int id);
 
 public:
 	static void Draw();		// ImGui::NewFrame と ImGui::Render の間で呼ぶ
@@ -45,6 +53,7 @@ public:
 
 	// シーンビュー
 	static bool        IsSceneViewHovered() { return m_SceneHovered; }
+	static bool        IsGizmoActive() { return m_GizmoActive; }
 	static ImDrawList* GetSceneDrawList() { return m_SceneDrawList; }
 	static void        GetSceneRect(float* minX, float* minY, float* maxX, float* maxY)
 	{

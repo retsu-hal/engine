@@ -6,8 +6,12 @@
 #include "Renderer.h"
 #include "Camera.h"
 #include "EditorCamera.h"
+#include "Collider.h"
+#include "ImGuizmo.h"
 #include <typeinfo>
 #include <cstring>
+#include <cfloat>
+#include <algorithm>
 
 unsigned int EditorGUI::m_SelectedID = 0;
 GameObject* EditorGUI::m_DragChild = nullptr;
@@ -20,6 +24,58 @@ bool         EditorGUI::m_SceneHovered = false;
 ImDrawList*  EditorGUI::m_SceneDrawList = nullptr;
 float        EditorGUI::m_SceneMin[2] = { 0.0f, 0.0f };
 float        EditorGUI::m_SceneMax[2] = { 0.0f, 0.0f };
+int          EditorGUI::m_GizmoOperation = 0;
+bool         EditorGUI::m_GizmoLocal = false;
+bool         EditorGUI::m_GizmoActive = false;
+
+//=============================================================
+// 今シーンビューに映しているカメラの行列（止めている間はエディタカメラ、Play 中はゲームカメラ）
+//=============================================================
+static bool GetActiveViewProjection(XMMATRIX& view, XMMATRIX& projection)
+{
+	if (EditorGUI::UseEditorCamera() && EditorCamera::IsInitialized())
+	{
+		view = EditorCamera::GetViewMatrix();
+		projection = EditorCamera::GetProjectionMatrix();
+		return true;
+	}
+
+	if (CAMERA* camera = Manager::GetGameObject<CAMERA>())
+	{
+		view = camera->GetViewMatrix();
+		projection = camera->GetProjectionMatrix();
+		return true;
+	}
+	return false;
+}
+
+//=============================================================
+// 回転行列 → GameObject の回転（XMMatrixRotationRollPitchYaw と同じ並び。x=pitch y=yaw z=roll）
+//=============================================================
+static Vector3 RotationFromQuaternion(FXMVECTOR quaternion)
+{
+	XMFLOAT4X4 m;
+	XMStoreFloat4x4(&m, XMMatrixRotationQuaternion(quaternion));
+
+	float sinPitch = -m._32;
+	if (sinPitch > 1.0f)  sinPitch = 1.0f;
+	if (sinPitch < -1.0f) sinPitch = -1.0f;
+	float pitch = asinf(sinPitch);
+
+	float yaw, roll;
+	if (fabsf(sinPitch) < 0.9999f)
+	{
+		yaw = atan2f(m._31, m._33);
+		roll = atan2f(m._12, m._22);
+	}
+	else
+	{
+		// 真上・真下を向いているときは yaw と roll が区別できないので roll を 0 にする
+		yaw = atan2f(-m._13, m._11);
+		roll = 0.0f;
+	}
+	return Vector3(pitch, yaw, roll);
+}
 
 void EditorGUI::Draw()
 {
@@ -42,51 +98,86 @@ bool EditorGUI::ConsumeGameUpdate()
 }
 
 //=============================================================
-// ツールバー（Play / Pause / Step / Stop）
+// ツールバー（再生 / 一時停止 / 停止）
 //=============================================================
 void EditorGUI::DrawToolbar()
 {
 	if (!ImGui::BeginMainMenuBar()) return;
 
-	// 今の状態のボタンを色付きにする
-	auto stateButton = [](const char* label, bool active) -> bool
-	{
-		if (active) ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
-		bool pressed = ImGui::Button(label);
-		if (active) ImGui::PopStyleColor();
-		return pressed;
-	};
+	enum class Icon { Play, Pause, Stop };
 
-	if (stateButton("Play", m_PlayState == PlayState::Play))
+	// 記号のボタン（フォントに記号がなくても表示できるよう、図形で描く）
+	auto iconButton = [](const char* id, Icon icon, bool active, const char* tooltip) -> bool
+		{
+			float h = ImGui::GetFrameHeight();
+			ImVec2 size(h * 1.4f, h);
+
+			if (active) ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+			bool pressed = ImGui::Button(id, size);
+			if (active) ImGui::PopStyleColor();
+
+			if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tooltip);
+
+			ImVec2 min = ImGui::GetItemRectMin();
+			ImVec2 max = ImGui::GetItemRectMax();
+			ImVec2 c((min.x + max.x) * 0.5f, (min.y + max.y) * 0.5f);
+			float r = h * 0.28f;	// 記号の大きさ
+			ImU32 color = ImGui::GetColorU32(ImGuiCol_Text);
+			ImDrawList* dl = ImGui::GetWindowDrawList();
+
+			switch (icon)
+			{
+			case Icon::Play:	// ▶
+				dl->AddTriangleFilled(ImVec2(c.x - r * 0.8f, c.y - r), ImVec2(c.x - r * 0.8f, c.y + r), ImVec2(c.x + r, c.y), color);
+				break;
+			case Icon::Pause:	// ❚❚
+				dl->AddRectFilled(ImVec2(c.x - r * 0.8f, c.y - r), ImVec2(c.x - r * 0.25f, c.y + r), color);
+				dl->AddRectFilled(ImVec2(c.x + r * 0.25f, c.y - r), ImVec2(c.x + r * 0.8f, c.y + r), color);
+				break;
+			case Icon::Stop:	// ■
+				dl->AddRectFilled(ImVec2(c.x - r * 0.85f, c.y - r * 0.85f), ImVec2(c.x + r * 0.85f, c.y + r * 0.85f), color);
+				break;
+			}
+			return pressed;
+		};
+
+	// Unity のように中央に並べる
+	float h = ImGui::GetFrameHeight();
+	float groupWidth = h * 1.4f * 3.0f + ImGui::GetStyle().ItemSpacing.x * 2.0f;
+	ImGui::SetCursorPosX((ImGui::GetWindowWidth() - groupWidth) * 0.5f);
+
+	// ▶：止まっていれば再生
+	if (iconButton("##Play", Icon::Play, m_PlayState == PlayState::Play, "再生"))
 	{
 		m_PlayState = PlayState::Play;
 	}
 
-	if (stateButton("Pause", m_PlayState == PlayState::Pause))
+	// ❚❚：Play 中なら一時停止、一時停止中なら再開
+	if (iconButton("##Pause", Icon::Pause, m_PlayState == PlayState::Pause, "一時停止"))
 	{
-		if (m_PlayState == PlayState::Play) m_PlayState = PlayState::Pause;
+		if (m_PlayState == PlayState::Play)       m_PlayState = PlayState::Pause;
+		else if (m_PlayState == PlayState::Pause) m_PlayState = PlayState::Play;
 	}
 
-	ImGui::BeginDisabled(m_PlayState == PlayState::Play);
-	if (ImGui::Button("Step")) RequestStep(1);
-	ImGui::EndDisabled();
-
-	if (ImGui::Button("Stop"))
+	// ■：シーンを読み込み直して最初の状態に戻す（読み込み後の1フレーム更新は Manager 側で行う）
+	if (iconButton("##Stop", Icon::Stop, false, "停止（最初の状態に戻す）"))
 	{
-		// シーンを読み込み直して最初の状態に戻す（読み込み後の1フレーム更新は Manager 側で行う）
 		m_PlayState = PlayState::Edit;
 		m_StepFrames = 0;
 		Manager::ReloadScene();
 	}
 
+	// 右端に状態と FPS
 	const char* stateText = "Edit";
 	if (m_PlayState == PlayState::Play)  stateText = "Playing";
 	if (m_PlayState == PlayState::Pause) stateText = "Paused";
-	ImGui::TextDisabled("|  %s  |  %.1f FPS", stateText, ImGui::GetIO().Framerate);
+	char info[64];
+	snprintf(info, sizeof(info), "%s  |  %.1f FPS", stateText, ImGui::GetIO().Framerate);
+	ImGui::SameLine(ImGui::GetWindowWidth() - ImGui::CalcTextSize(info).x - ImGui::GetStyle().WindowPadding.x * 2.0f);
+	ImGui::TextDisabled("%s", info);
 
 	ImGui::EndMainMenuBar();
 }
-
 //=============================================================
 // シーンビュー
 //=============================================================
@@ -95,12 +186,24 @@ void EditorGUI::DrawSceneView()
 	m_SceneHovered = false;
 	m_SceneDrawList = nullptr;
 
+	// ギズモを掴んでいる間はウィンドウが動かないようにする（前のフレームの状態で判定）
+	ImGuiWindowFlags flags = m_GizmoActive ? ImGuiWindowFlags_NoMove : 0;
+	m_GizmoActive = false;
+
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-	bool visible = ImGui::Begin("Scene");
+	bool visible = ImGui::Begin("Scene", nullptr, flags);
 	ImGui::PopStyleVar();
 
 	if (visible)
 	{
+		// ギズモの切り替え（W/E/R キーでも切り替えられる）
+		ImGui::SetCursorPos(ImVec2(ImGui::GetCursorPosX() + 6.0f, ImGui::GetCursorPosY() + 4.0f));
+		ImGui::RadioButton("移動 (W)", &m_GizmoOperation, 0);	ImGui::SameLine();
+		ImGui::RadioButton("回転 (E)", &m_GizmoOperation, 1);	ImGui::SameLine();
+		ImGui::RadioButton("拡縮 (R)", &m_GizmoOperation, 2);	ImGui::SameLine();
+		ImGui::TextDisabled("|");	ImGui::SameLine();
+		ImGui::Checkbox("Local", &m_GizmoLocal);
+
 		// 画面の縦横比を保ったまま、ウィンドウに収まる大きさで表示する
 		ImVec2 avail = ImGui::GetContentRegionAvail();
 		float aspect = (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT;
@@ -112,23 +215,215 @@ void EditorGUI::DrawSceneView()
 		ImVec2 cursor = ImGui::GetCursorPos();
 		ImGui::SetCursorPos(ImVec2(cursor.x + (avail.x - size.x) * 0.5f, cursor.y + (avail.y - size.y) * 0.5f));
 
-		ImGui::Image((ImTextureID)(intptr_t)Renderer::GetSceneTexture(), size);
-
-		ImVec2 min = ImGui::GetItemRectMin();
-		ImVec2 max = ImGui::GetItemRectMax();
+		ImVec2 min = ImGui::GetCursorScreenPos();
+		ImVec2 max(min.x + size.x, min.y + size.y);
 		m_SceneMin[0] = min.x; m_SceneMin[1] = min.y;
 		m_SceneMax[0] = max.x; m_SceneMax[1] = max.y;
-		m_SceneHovered = ImGui::IsItemHovered();
+
 		m_SceneDrawList = ImGui::GetWindowDrawList();
+		m_SceneDrawList->AddImage((ImTextureID)(intptr_t)Renderer::GetSceneTexture(), min, max);
+
+		// ボタンなどの項目に頼らず、ウィンドウと四角の範囲でマウスが乗っているか判定する
+		m_SceneHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem)
+			&& ImGui::IsMouseHoveringRect(min, max);
+
+		// キーでギズモ切り替え（右ドラッグ中は WASD でカメラ移動するので切り替えない）
+		ImGuiIO& io = ImGui::GetIO();
+		if (m_SceneHovered && !ImGui::IsMouseDown(ImGuiMouseButton_Right) && !io.WantTextInput)
+		{
+			if (ImGui::IsKeyPressed(ImGuiKey_W, false)) m_GizmoOperation = 0;
+			if (ImGui::IsKeyPressed(ImGuiKey_E, false)) m_GizmoOperation = 1;
+			if (ImGui::IsKeyPressed(ImGuiKey_R, false)) m_GizmoOperation = 2;
+			if (ImGui::IsKeyPressed(ImGuiKey_F, false)) FocusObject(m_SelectedID);	// F: 選択中のものに寄る
+		}
+
+		// 止めている間は、クリックでオブジェクトを選ぶ（ギズモを掴んだときは選び直さない）
+		if (UseEditorCamera() && m_SceneHovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left)
+			&& !ImGuizmo::IsOver() && !ImGuizmo::IsUsing())
+		{
+			PickObject();
+		}
+
+		// ギズモはボタンより先に処理する
+		// （ImGuizmo は「他の ImGui の項目にマウスが乗っていない」ときしか掴めないため）
+		DrawTransformGizmo();
+
+		// 画像の上をドラッグしてもウィンドウが動かないよう、見えないボタンを置く
+		// ギズモにマウスが乗っている間は置かない（置くとギズモが掴めなくなる）
+		ImGui::SetCursorScreenPos(min);
+		if (m_GizmoActive)
+			ImGui::Dummy(size);
+		else
+			ImGui::InvisibleButton("##SceneImage", size, ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight);
 
 		// 左上に操作ヒント
 		if (UseEditorCamera())
 		{
 			m_SceneDrawList->AddText(ImVec2(min.x + 8.0f, min.y + 6.0f), IM_COL32(255, 255, 255, 200),
-				"右ドラッグ: 視点  右ドラッグ+WASD/QE: 移動  ホイール: 前後");
+				"クリック: 選択  右ドラッグ: 視点  右ドラッグ+WASD/QE: 移動  ホイール: 前後  F: フォーカス  Ctrl: スナップ");
 		}
 	}
 	ImGui::End();
+}
+//=============================================================
+// 選択中のオブジェクトのギズモ（ImGuizmo）
+//=============================================================
+void EditorGUI::DrawTransformGizmo()
+{
+	GameObject* object = Manager::FindGameObjectByID(m_SelectedID);
+	if (object == nullptr) return;
+	if (object->GetLayer() == 3) return;	// 2D のオブジェクトは対象外
+
+	XMMATRIX view, projection;
+	if (!GetActiveViewProjection(view, projection)) return;
+
+	XMFLOAT4X4 viewF, projectionF, worldF;
+	XMStoreFloat4x4(&viewF, view);
+	XMStoreFloat4x4(&projectionF, projection);
+	XMStoreFloat4x4(&worldF, object->GetWorldMatrix());
+
+	ImGuizmo::SetOrthographic(false);
+	ImGuizmo::SetDrawlist(m_SceneDrawList);
+	ImGuizmo::SetRect(m_SceneMin[0], m_SceneMin[1], m_SceneMax[0] - m_SceneMin[0], m_SceneMax[1] - m_SceneMin[1]);
+
+	ImGuizmo::OPERATION operation = ImGuizmo::TRANSLATE;
+	if (m_GizmoOperation == 1) operation = ImGuizmo::ROTATE;
+	if (m_GizmoOperation == 2) operation = ImGuizmo::SCALE;
+
+	// Ctrl を押している間はスナップ（移動 1m / 回転 15度 / 拡縮 0.1）
+	float snap[3] = { 1.0f, 1.0f, 1.0f };
+	if (m_GizmoOperation == 1) snap[0] = 15.0f;
+	if (m_GizmoOperation == 2) snap[0] = snap[1] = snap[2] = 0.1f;
+	bool useSnap = ImGui::GetIO().KeyCtrl;
+
+	bool changed = ImGuizmo::Manipulate(&viewF._11, &projectionF._11, operation,
+		m_GizmoLocal ? ImGuizmo::LOCAL : ImGuizmo::WORLD, &worldF._11, nullptr, useSnap ? snap : nullptr);
+
+	m_GizmoActive = ImGuizmo::IsOver() || ImGuizmo::IsUsing();
+
+	if (!changed) return;
+
+	// ギズモが返すのはワールド行列なので、親がいれば親から見た行列に直す
+	XMMATRIX local = XMLoadFloat4x4(&worldF);
+	if (GameObject* parent = object->GetParent())
+	{
+		local = local * XMMatrixInverse(nullptr, parent->GetWorldMatrix());
+	}
+
+	XMVECTOR scale, rotation, translation;
+	if (!XMMatrixDecompose(&scale, &rotation, &translation, local)) return;
+
+	Vector3 position, scaleValue;
+	XMStoreFloat3((XMFLOAT3*)&position, translation);
+	XMStoreFloat3((XMFLOAT3*)&scaleValue, scale);
+
+	object->SetPosition(position);
+	if (m_GizmoOperation == 1) object->SetRotation(RotationFromQuaternion(rotation));	// 回転以外では回転を書き換えない（誤差で角度の表記が変わるのを防ぐ）
+	if (m_GizmoOperation == 2) object->SetScale(scaleValue);
+}
+
+//=============================================================
+// シーンビューのクリックでオブジェクトを選ぶ
+// 1. マウス位置から伸ばした光線とコライダーの箱が当たったもののうち、一番手前
+// 2. どれにも当たらなければ、画面上でオブジェクトの位置に一番近いもの（25px 以内）
+//=============================================================
+void EditorGUI::PickObject()
+{
+	XMMATRIX view, projection;
+	if (!GetActiveViewProjection(view, projection)) return;
+
+	ImVec2 mouse = ImGui::GetIO().MousePos;
+	float width = m_SceneMax[0] - m_SceneMin[0];
+	float height = m_SceneMax[1] - m_SceneMin[1];
+	float ndcX = (mouse.x - m_SceneMin[0]) / width * 2.0f - 1.0f;
+	float ndcY = 1.0f - (mouse.y - m_SceneMin[1]) / height * 2.0f;
+
+	XMMATRIX viewProjection = view * projection;
+	XMMATRIX inverse = XMMatrixInverse(nullptr, viewProjection);
+	XMVECTOR nearPoint = XMVector3TransformCoord(XMVectorSet(ndcX, ndcY, 0.0f, 1.0f), inverse);
+	XMVECTOR farPoint = XMVector3TransformCoord(XMVectorSet(ndcX, ndcY, 1.0f, 1.0f), inverse);
+
+	XMFLOAT3 origin, direction;
+	XMStoreFloat3(&origin, nearPoint);
+	XMStoreFloat3(&direction, XMVector3Normalize(farPoint - nearPoint));
+
+	unsigned int bestID = 0;
+	float bestDistance = FLT_MAX;
+
+	// 1. コライダーとの当たり（形はすべて外側の箱で近似する）
+	for (GameObject* object : Manager::GetAllGameObjects())
+	{
+		if (object->IsDestroyed()) continue;
+
+		for (Component* component : object->GetComponents())
+		{
+			Collider* collider = dynamic_cast<Collider*>(component);
+			if (collider == nullptr || !collider->IsEnabled()) continue;
+
+			ColliderShape shape = collider->GetShape();
+			float half[3] = {
+				shape.HalfX + shape.RadiusXZ + shape.Radius,
+				shape.HalfY + shape.Radius,
+				shape.HalfZ + shape.RadiusXZ + shape.Radius };
+			float center[3] = { shape.Center.x, shape.Center.y, shape.Center.z };
+			float o[3] = { origin.x, origin.y, origin.z };
+			float d[3] = { direction.x, direction.y, direction.z };
+
+			// スラブ法で光線と箱の交差を調べる
+			float tMin = 0.0f, tMax = FLT_MAX;
+			bool hit = true;
+			for (int axis = 0; axis < 3; axis++)
+			{
+				float lo = center[axis] - half[axis];
+				float hi = center[axis] + half[axis];
+				if (fabsf(d[axis]) < 1e-6f)
+				{
+					if (o[axis] < lo || o[axis] > hi) { hit = false; break; }
+				}
+				else
+				{
+					float t1 = (lo - o[axis]) / d[axis];
+					float t2 = (hi - o[axis]) / d[axis];
+					if (t1 > t2) { float tmp = t1; t1 = t2; t2 = tmp; }
+					if (t1 > tMin) tMin = t1;
+					if (t2 < tMax) tMax = t2;
+					if (tMin > tMax) { hit = false; break; }
+				}
+			}
+
+			if (hit && tMin < bestDistance)
+			{
+				bestDistance = tMin;
+				bestID = object->GetID();
+			}
+		}
+	}
+
+	// 2. 画面上の距離
+	if (bestID == 0)
+	{
+		float bestPixels = 25.0f;
+		for (GameObject* object : Manager::GetAllGameObjects())
+		{
+			if (object->IsDestroyed() || object->GetLayer() == 3) continue;
+
+			Vector3 p = object->GetWorldPosition();
+			XMVECTOR clip = XMVector4Transform(XMVectorSet(p.x, p.y, p.z, 1.0f), viewProjection);
+			float w = XMVectorGetW(clip);
+			if (w <= 0.1f) continue;	// カメラの後ろ
+
+			float sx = m_SceneMin[0] + (XMVectorGetX(clip) / w * 0.5f + 0.5f) * width;
+			float sy = m_SceneMin[1] + (-XMVectorGetY(clip) / w * 0.5f + 0.5f) * height;
+			float pixels = sqrtf((sx - mouse.x) * (sx - mouse.x) + (sy - mouse.y) * (sy - mouse.y));
+			if (pixels < bestPixels)
+			{
+				bestPixels = pixels;
+				bestID = object->GetID();
+			}
+		}
+	}
+
+	m_SelectedID = bestID;	// 何もないところをクリックしたら選択を外す
 }
 
 //=============================================================
@@ -188,6 +483,7 @@ void EditorGUI::DrawNode(GameObject* object)
 	if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
 	{
 		m_SelectedID = object->GetID();
+		FocusObject(m_SelectedID);
 	}
 
 	// ドラッグ元
@@ -294,4 +590,60 @@ void EditorGUI::DrawInspector()
 	}
 
 	ImGui::End();
-}
+}
+
+//=============================================================
+// Scene のカメラをオブジェクトに寄せる
+// コライダーがあればその大きさ、なければ 1m 程度の物として距離を決める
+//=============================================================
+void EditorGUI::FocusObject(unsigned int id)
+{
+	if (!UseEditorCamera() || !EditorCamera::IsInitialized()) return;	// Play 中はゲームカメラなので何もしない
+
+	GameObject* object = Manager::FindGameObjectByID(id);
+	if (object == nullptr) return;
+
+	Vector3 center = object->GetWorldPosition();
+	float radius = 1.0f;
+
+	// コライダーをすべて囲む箱を求める
+	bool found = false;
+	Vector3 boundsMin, boundsMax;
+	for (Component* component : object->GetComponents())
+	{
+		Collider* collider = dynamic_cast<Collider*>(component);
+		if (collider == nullptr) continue;
+
+		ColliderShape shape = collider->GetShape();
+		Vector3 half(shape.HalfX + shape.RadiusXZ + shape.Radius,
+			shape.HalfY + shape.Radius,
+			shape.HalfZ + shape.RadiusXZ + shape.Radius);
+		Vector3 mn = shape.Center - half;
+		Vector3 mx = shape.Center + half;
+
+		if (!found)
+		{
+			boundsMin = mn;
+			boundsMax = mx;
+			found = true;
+		}
+		else
+		{
+			boundsMin = Vector3((std::min)(boundsMin.x, mn.x), (std::min)(boundsMin.y, mn.y), (std::min)(boundsMin.z, mn.z));
+			boundsMax = Vector3((std::max)(boundsMax.x, mx.x), (std::max)(boundsMax.y, mx.y), (std::max)(boundsMax.z, mx.z));
+		}
+	}
+
+	if (found)
+	{
+		center = (boundsMin + boundsMax) * 0.5f;
+		radius = (boundsMax - boundsMin).length() * 0.5f;
+	}
+
+	// 大きい物ほど離れる。近すぎ・遠すぎは制限
+	float distance = radius * 2.5f;
+	if (distance < 3.0f)   distance = 3.0f;
+	if (distance > 200.0f) distance = 200.0f;
+
+	EditorCamera::Focus(center, distance);
+}

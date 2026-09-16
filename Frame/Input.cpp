@@ -486,10 +486,11 @@ bool Input::GetKeyRelease(BYTE KeyCode)
 // マウスボタン
 //======================================================================
 // ImGui のウィンドウを操作しているときはゲームにクリックを渡さない
-// ただしシーンビュー（ゲーム画面）の上はゲームの操作として扱う
+// ただしシーンビュー（ゲーム画面）の上はゲームの操作として扱う（ギズモを触っているときは除く）
 static bool IsMouseBlockedByEditor()
 {
 	if (ImGui::GetCurrentContext() == nullptr) return false;
+	if (EditorGUI::IsGizmoActive()) return true;	// ギズモを操作している
 	return ImGui::GetIO().WantCaptureMouse && !EditorGUI::IsSceneViewHovered();
 }
 
@@ -557,4 +558,4 @@ bool Input::IsMouseVisible()
 bool Input::IsMouseConnected()
 {
 	return GetSystemMetrics(SM_MOUSEPRESENT) != 0;
-}
+}

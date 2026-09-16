@@ -19,6 +19,9 @@
     <Filter Include="imgui">
       <UniqueIdentifier>{bd732d3a-22b5-4fb6-a9e1-381bbe962618}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ImGuizmo">
+      <UniqueIdentifier>{5b2f9c3e-8a1d-4f6b-9e2c-3d7a1b8c4e5f}</UniqueIdentifier>
+    </Filter>
     <Filter Include="imgui\backends">
       <UniqueIdentifier>{564ee1fb-12ed-4a8b-a813-b7dbaa2e8d6b}</UniqueIdentifier>
     </Filter>
@@ -139,6 +142,9 @@
     </ClCompile>
     <ClCompile Include="ThirdParty\imgui\imgui_widgets.cpp">
       <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="ThirdParty\ImGuizmo\ImGuizmo.cpp">
+      <Filter>ImGuizmo</Filter>
     </ClCompile>
     <ClCompile Include="Frame\EditorCamera.cpp">
       <Filter>Frame</Filter>
@@ -274,6 +280,9 @@
     </ClInclude>
     <ClInclude Include="ThirdParty\imgui\imstb_truetype.h">
       <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\ImGuizmo\ImGuizmo.h">
+      <Filter>ImGuizmo</Filter>
     </ClInclude>
     <ClInclude Include="Frame\EditorCamera.h">
       <Filter>Frame</Filter>
