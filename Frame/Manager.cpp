@@ -29,6 +29,8 @@ void Manager::Init()
 
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
+	ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+	ImGui::StyleColorsDark();
 	ImGui::StyleColorsDark();
 	ImGui_ImplWin32_Init(GetWindow());
 	ImGui_ImplDX11_Init(Renderer::GetDevice(), Renderer::GetDeviceContext());
@@ -42,7 +44,7 @@ void Manager::Uninit()
 	ImGui_ImplDX11_Shutdown();
 	ImGui_ImplWin32_Shutdown();
 	ImGui::DestroyContext();
-
+	
 	
 	for (GameObject* obj : m_GameObjects) obj->Uninit();
 	for (GameObject* obj : m_GameObjects) delete obj;
@@ -69,6 +71,8 @@ void Manager::Update()
 	ImGui_ImplDX11_NewFrame();
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
+
+	ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
 
 	float  dt =GetDeltaTime();
 	Input::Update();

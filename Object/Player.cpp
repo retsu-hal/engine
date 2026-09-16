@@ -64,6 +64,7 @@ void Player::Update()
 #if _DEBUG
 	ImGui::Begin("PlayerDebug");
 	ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
+	ImGui::Text("DeltaTime: %.3f", Manager::GetDeltaTime());
 	ImGui::Text("Position: (%.2f, %.2f, %.2f)", m_Position.x, m_Position.y, m_Position.z);
 	ImGui::Text("Rotation: (%.2f, %.2f, %.2f)", m_Rotation.x, m_Rotation.y, m_Rotation.z);
 	ImGui::Text("Scale: (%.2f, %.2f, %.2f)", m_Scale.x, m_Scale.y, m_Scale.z);

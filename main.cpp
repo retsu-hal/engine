@@ -71,7 +71,11 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 	dwExecLastTime = timeGetTime();
 	dwCurrentTime = 0;
 
-
+	// 高精度タイマーで実際の経過時間を測る
+	LARGE_INTEGER freq, last, now;
+	QueryPerformanceFrequency(&freq);
+	QueryPerformanceCounter(&last);
+	timeBeginPeriod(1);
 
 	MSG msg;
 	while(1)
@@ -90,12 +94,18 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         }
 		else
 		{
-			dwCurrentTime = timeGetTime();
+			QueryPerformanceCounter(&now);
+			double elapsed = double(now.QuadPart - last.QuadPart) / double(freq.QuadPart);
 
-			if((dwCurrentTime - dwExecLastTime) >= (1000 / 60))
+			if (elapsed >= 1.0 / 60.0)
 			{
-				dwExecLastTime = dwCurrentTime;
+				last = now;
 
+				// ウィンドウのドラッグ中などで長く止まったときに、物がワープしないよう上限をつける
+				float dt = (float)elapsed;
+				if (dt > 0.1f) dt = 0.1f;
+
+				Manager::SetDeltaTime(dt);
 				Manager::Update();
 				Manager::Draw();
 			}
@@ -118,12 +128,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-#if  _DEBUG
 	extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND, UINT, WPARAM, LPARAM);
 	if (ImGui_ImplWin32_WndProcHandler(hWnd, uMsg, wParam, lParam))
 		return true;
-
-#endif //  _DEBUG
 
 	
 	switch(uMsg)

@@ -26,6 +26,7 @@ public:
 	static void Update();
 	static void Draw();
 	static float GetDeltaTime() { return m_DeltaTime; }
+	static void SetDeltaTime(float dt) { m_DeltaTime = dt; }
 
 	template<typename T>
 	static T* AddGameObject()
