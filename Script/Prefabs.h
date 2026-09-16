@@ -13,4 +13,10 @@ namespace Prefabs
 	GameObject* CreateBullet(const Vector3& position, const Vector3& velocity);
 	GameObject* CreateEnemy(const Vector3& position);
 	GameObject* CreatePlayer(const Vector3& position);
+
+	// Hierarchy の右クリックから作る基本の形（当たり判定付き）
+	GameObject* CreateEmpty(const Vector3& position);
+	GameObject* CreateCube(const Vector3& position);
+	GameObject* CreateSphere(const Vector3& position);
+	GameObject* CreateCapsule(const Vector3& position);
 }

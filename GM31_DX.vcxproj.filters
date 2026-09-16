@@ -76,6 +76,9 @@
     <ClCompile Include="Component\Collider.cpp">
       <Filter>Component</Filter>
     </ClCompile>
+    <ClCompile Include="Component\PrimitiveRenderer.cpp">
+      <Filter>Component</Filter>
+    </ClCompile>
     <ClCompile Include="Component\ModelRenderer.cpp">
       <Filter>Component</Filter>
     </ClCompile>
@@ -146,6 +149,9 @@
     <ClCompile Include="ThirdParty\ImGuizmo\ImGuizmo.cpp">
       <Filter>ImGuizmo</Filter>
     </ClCompile>
+    <ClCompile Include="Frame\AssetBrowser.cpp">
+      <Filter>Frame</Filter>
+    </ClCompile>
     <ClCompile Include="Frame\SceneSerializer.cpp">
       <Filter>Frame</Filter>
     </ClCompile>
@@ -203,6 +209,9 @@
       <Filter>Component</Filter>
     </ClInclude>
     <ClInclude Include="Component\Collider.h">
+      <Filter>Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Component\PrimitiveRenderer.h">
       <Filter>Component</Filter>
     </ClInclude>
     <ClInclude Include="Component\ModelRenderer.h">
@@ -287,6 +296,9 @@
     <ClInclude Include="ThirdParty\ImGuizmo\ImGuizmo.h">
       <Filter>ImGuizmo</Filter>
     </ClInclude>
+    <ClInclude Include="Frame\AssetBrowser.h">
+      <Filter>Frame</Filter>
+    </ClInclude>
     <ClInclude Include="Frame\SceneSerializer.h">
       <Filter>Frame</Filter>
     </ClInclude>
@@ -308,6 +320,12 @@
       <Filter>シェーダーファイル</Filter>
     </FxCompile>
     <FxCompile Include="shader\unlitTexturePS.hlsl">
+      <Filter>シェーダーファイル</Filter>
+    </FxCompile>
+    <FxCompile Include="shader\litVS.hlsl">
+      <Filter>シェーダーファイル</Filter>
+    </FxCompile>
+    <FxCompile Include="shader\litPS.hlsl">
       <Filter>シェーダーファイル</Filter>
     </FxCompile>
     <FxCompile Include="shader\unlitTextureVS.hlsl">

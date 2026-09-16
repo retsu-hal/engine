@@ -2,6 +2,7 @@
 #include "main.h"
 #include "JsonUtil.h"
 #include "Registry.h"
+#include "AssetBrowser.h"
 #include "Audio.h"
 
 
@@ -159,7 +160,15 @@ void Audio::Play(bool Loop)
 
 void Audio::OnInspectorGUI()
 {
-	ImGui::Text("Sound: %s", m_FileName.c_str());
+	ImGui::Text("Sound: %s", m_FileName.empty() ? "(なし) ← .wav をドロップ" : m_FileName.c_str());
+	std::string path;
+	if (AssetBrowser::AcceptDrop(AssetBrowser::AssetType::Audio, path))
+	{
+		Uninit();					// 読み込み済みの音を解放してから読み直す
+		m_SourceVoice = nullptr;
+		m_SoundData = nullptr;
+		Load(path.c_str());
+	}
 	if (ImGui::Button("Play")) Play();
 }
 

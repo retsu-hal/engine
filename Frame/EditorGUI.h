@@ -3,6 +3,7 @@
 #include <string>
 
 class GameObject;
+class Vector3;
 struct ImDrawList;
 
 enum class PlayState
@@ -46,6 +47,7 @@ private:
 	static void DrawTransformGizmo();
 	static void PickObject();
 	static void FocusObject(unsigned int id);
+	static Vector3 GetDropPosition();
 	static void DrawSceneView();
 	static void DrawHierarchy();
 	static void DrawNode(GameObject* object);
@@ -53,6 +55,9 @@ private:
 
 public:
 	static void Draw();		// ImGui::NewFrame と ImGui::Render の間で呼ぶ
+
+	// シーンファイルを開く（止めた状態で読み込む）
+	static void OpenScene(const std::string& path);
 
 	// Play/Pause/Stop
 	static PlayState GetPlayState() { return m_PlayState; }

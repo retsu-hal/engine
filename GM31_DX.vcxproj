@@ -139,6 +139,7 @@
     <ClCompile Include="Script\EnemyController.cpp" />
     <ClCompile Include="Script\PlayerController.cpp" />
     <ClCompile Include="ThirdParty\ImGuizmo\ImGuizmo.cpp" />
+    <ClCompile Include="Frame\AssetBrowser.cpp" />
     <ClCompile Include="Frame\SceneSerializer.cpp" />
     <ClCompile Include="Frame\EditorCamera.cpp" />
     <ClCompile Include="Frame\EditorGUI.cpp" />
@@ -153,6 +154,7 @@
     <ClCompile Include="Component\Audio.cpp" />
     <ClCompile Include="Component\BillboardRenderer.cpp" />
     <ClCompile Include="Component\Collider.cpp" />
+    <ClCompile Include="Component\PrimitiveRenderer.cpp" />
     <ClCompile Include="Component\ModelRenderer.cpp" />
     <ClCompile Include="Component\Rigidbody.cpp" />
     <ClCompile Include="Component\SpriteAnimation.cpp" />
@@ -183,6 +185,7 @@
     <ClInclude Include="Script\EnemyController.h" />
     <ClInclude Include="Script\PlayerController.h" />
     <ClInclude Include="ThirdParty\ImGuizmo\ImGuizmo.h" />
+    <ClInclude Include="Frame\AssetBrowser.h" />
     <ClInclude Include="Frame\SceneSerializer.h" />
     <ClInclude Include="Frame\Registry.h" />
     <ClInclude Include="Frame\JsonUtil.h" />
@@ -205,6 +208,7 @@
     <ClInclude Include="Component\Audio.h" />
     <ClInclude Include="Component\BillboardRenderer.h" />
     <ClInclude Include="Component\Collider.h" />
+    <ClInclude Include="Component\PrimitiveRenderer.h" />
     <ClInclude Include="Component\ModelRenderer.h" />
     <ClInclude Include="Component\Rigidbody.h" />
     <ClInclude Include="Component\SpriteAnimation.h" />
@@ -273,6 +277,34 @@
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(Filename).cso</ObjectFileOutput>
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(Filename).cso</ObjectFileOutput>
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">shader\%(Filename).cso</ObjectFileOutput>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">shader\%(Filename).cso</ObjectFileOutput>
+    </FxCompile>
+    <FxCompile Include="shader\litVS.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">5.0</ShaderModel>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(Filename).cso</ObjectFileOutput>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">5.0</ShaderModel>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(Filename).cso</ObjectFileOutput>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">shader\%(Filename).cso</ObjectFileOutput>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">shader\%(Filename).cso</ObjectFileOutput>
+    </FxCompile>
+    <FxCompile Include="shader\litPS.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">5.0</ShaderModel>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(Filename).cso</ObjectFileOutput>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">5.0</ShaderModel>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(Filename).cso</ObjectFileOutput>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">shader\%(Filename).cso</ObjectFileOutput>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">shader\%(Filename).cso</ObjectFileOutput>
     </FxCompile>
     <FxCompile Include="shader\unlitTextureVS.hlsl">

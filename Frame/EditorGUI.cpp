@@ -10,6 +10,10 @@
 #include "ImGuizmo.h"
 #include "SceneSerializer.h"
 #include "Registry.h"
+#include "AssetBrowser.h"
+#include "Prefabs.h"
+#include "MeshField.h"
+#include "imgui_internal.h"	// BeginDragDropTargetCustom
 #include <typeinfo>
 #include <cstring>
 #include <cfloat>
@@ -90,6 +94,16 @@ void EditorGUI::Draw()
 	DrawSceneView();
 	DrawHierarchy();
 	DrawInspector();
+	AssetBrowser::Draw();
+}
+
+void EditorGUI::OpenScene(const std::string& path)
+{
+	m_PlayState = PlayState::Edit;
+	m_HasSnapshot = false;
+	m_SelectedID = 0;
+	m_ScenePath = path;
+	Manager::LoadSceneFile(path);
 }
 
 bool EditorGUI::ConsumeGameUpdate()
@@ -160,11 +174,7 @@ void EditorGUI::DrawFileMenu()
 					std::string path = std::string("asset\\scene\\") + find.cFileName;
 					if (ImGui::MenuItem(find.cFileName, nullptr, path == m_ScenePath))
 					{
-						m_PlayState = PlayState::Edit;	// 読み込んだら止めた状態にする
-						m_HasSnapshot = false;
-						m_SelectedID = 0;
-						m_ScenePath = path;
-						Manager::LoadSceneFile(path);
+						OpenScene(path);
 					}
 				} while (FindNextFileA(handle, &find));
 				FindClose(handle);
@@ -296,6 +306,46 @@ void EditorGUI::DrawToolbar()
 //=============================================================
 // シーンビュー
 //=============================================================
+//=============================================================
+// ドロップした場所（マウスから伸ばした光線が地面と交わる点。地面がなければカメラの前）
+//=============================================================
+Vector3 EditorGUI::GetDropPosition()
+{
+	XMMATRIX view, projection;
+	if (!GetActiveViewProjection(view, projection)) return Vector3(0.0f, 0.0f, 0.0f);
+
+	ImVec2 mouse = ImGui::GetIO().MousePos;
+	float ndcX = (mouse.x - m_SceneMin[0]) / (m_SceneMax[0] - m_SceneMin[0]) * 2.0f - 1.0f;
+	float ndcY = 1.0f - (mouse.y - m_SceneMin[1]) / (m_SceneMax[1] - m_SceneMin[1]) * 2.0f;
+
+	XMMATRIX inverse = XMMatrixInverse(nullptr, view * projection);
+	XMVECTOR nearPoint = XMVector3TransformCoord(XMVectorSet(ndcX, ndcY, 0.0f, 1.0f), inverse);
+	XMVECTOR farPoint = XMVector3TransformCoord(XMVectorSet(ndcX, ndcY, 1.0f, 1.0f), inverse);
+
+	Vector3 origin, direction;
+	XMStoreFloat3((XMFLOAT3*)&origin, nearPoint);
+	XMStoreFloat3((XMFLOAT3*)&direction, XMVector3Normalize(farPoint - nearPoint));
+
+	MeshField* field = Manager::GetGameObject<MeshField>();
+
+	// 光線を少しずつ進めて、地面の高さより下に入ったところを探す（起伏があっても置ける）
+	Vector3 p = origin;
+	const float step = 0.5f;
+	for (int i = 0; i < 1000; i++)
+	{
+		float ground = field ? field->GetHeight(p) : 0.0f;
+		if (p.y <= ground)
+		{
+			p.y = ground;
+			return p;
+		}
+		p += direction * step;
+	}
+
+	// 地面に届かない（空を向いている）ときはカメラの 10m 前
+	return origin + direction * 10.0f;
+}
+
 void EditorGUI::DrawSceneView()
 {
 	m_SceneHovered = false;
@@ -370,6 +420,25 @@ void EditorGUI::DrawSceneView()
 			ImGui::Dummy(size);
 		else
 			ImGui::InvisibleButton("##SceneImage", size, ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight);
+
+		// Project ウィンドウからのドロップ（ボタンの有無に関係なく、画像の範囲で受け取る）
+		if (ImGui::BeginDragDropTargetCustom(ImRect(min, max), ImGui::GetID("##SceneDrop")))
+		{
+			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ASSET_PATH"))
+			{
+				std::string path = (const char*)payload->Data;
+
+				if (AssetBrowser::GetType(path) == AssetBrowser::AssetType::Scene)
+				{
+					OpenScene(path);
+				}
+				else if (GameObject* object = AssetBrowser::CreateObject(path, GetDropPosition()))
+				{
+					m_SelectedID = object->GetID();
+				}
+			}
+			ImGui::EndDragDropTarget();
+		}
 
 		// 左上に操作ヒント
 		if (UseEditorCamera())
@@ -566,10 +635,14 @@ void EditorGUI::DrawHierarchy()
 	ImGui::InvisibleButton("##HierarchyEmpty", rest);
 
 	// 空いている場所を右クリック：オブジェクトを作る
-	bool createEmpty = false;
+	int createType = -1;	// 0:空 1:四角 2:球 3:カプセル
 	if (ImGui::BeginPopupContextItem("##HierarchyContext"))
 	{
-		if (ImGui::MenuItem("空のオブジェクトを作成")) createEmpty = true;
+		if (ImGui::MenuItem("空のオブジェクト")) createType = 0;
+		ImGui::Separator();
+		if (ImGui::MenuItem("四角"))       createType = 1;
+		if (ImGui::MenuItem("球"))         createType = 2;
+		if (ImGui::MenuItem("カプセル"))   createType = 3;
 		ImGui::EndPopup();
 	}
 
@@ -592,12 +665,21 @@ void EditorGUI::DrawHierarchy()
 		m_HasDrop = false;
 	}
 
-	if (createEmpty)
+	if (createType >= 0)
 	{
-		GameObject* object = Manager::CreateGameObject("GameObject");
-		if (EditorCamera::IsInitialized())	// カメラの少し前に置く
-			object->SetPosition(EditorCamera::GetPosition() + EditorCamera::GetForward() * 10.0f);
-		m_SelectedID = object->GetID();
+		// エディタカメラの 10m 前に置く
+		Vector3 position(0.0f, 0.0f, 0.0f);
+		if (EditorCamera::IsInitialized()) position = EditorCamera::GetPosition() + EditorCamera::GetForward() * 10.0f;
+
+		GameObject* object = nullptr;
+		switch (createType)
+		{
+		case 0: object = Prefabs::CreateEmpty(position);   break;
+		case 1: object = Prefabs::CreateCube(position);    break;
+		case 2: object = Prefabs::CreateSphere(position);  break;
+		case 3: object = Prefabs::CreateCapsule(position); break;
+		}
+		if (object) m_SelectedID = object->GetID();
 	}
 
 	ImGui::End();

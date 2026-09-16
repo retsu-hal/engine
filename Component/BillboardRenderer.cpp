@@ -1,6 +1,7 @@
 ﻿#include "main.h"
 #include "JsonUtil.h"
 #include "Registry.h"
+#include "AssetBrowser.h"
 #include "Renderer.h"
 #include "Manager.h"
 #include "GameObject.h"
@@ -104,7 +105,9 @@ void BillboardRenderer::Draw()
 
 void BillboardRenderer::OnInspectorGUI()
 {
-	ImGui::Text("Texture: %s", WideToUtf8(m_TextureFile).c_str());
+	ImGui::Text("Texture: %s", m_TextureFile.empty() ? "(なし) ← 画像をドロップ" : WideToUtf8(m_TextureFile).c_str());
+	std::string path;
+	if (AssetBrowser::AcceptDrop(AssetBrowser::AssetType::Texture, path)) Load(Utf8ToWide(path).c_str());
 	int mode = (int)m_Mode;
 	if (ImGui::Combo("Mode", &mode, "Full\0AxisY\0")) m_Mode = (BillboardMode)mode;
 	ImGui::DragFloat("Width", &m_Width, 0.05f);

@@ -11,6 +11,8 @@
 #include "GameObject.h"
 #include "JsonUtil.h"
 #include "Registry.h"
+#include "AssetBrowser.h"
+
 
 
 std::unordered_map<std::string, MODEL*> ModelRenderer::m_ModelPool;
@@ -575,7 +577,10 @@ void ModelRenderer::LoadMaterial( const char *FileName, MODEL_MATERIAL **Materia
 
 void ModelRenderer::OnInspectorGUI()
 {
-	ImGui::Text("Model: %s", m_FileName.c_str());
+	ImGui::Text("Model: %s", m_FileName.empty() ? "(なし) ← .obj をドロップ" : m_FileName.c_str());
+
+	std::string path;
+	if (AssetBrowser::AcceptDrop(AssetBrowser::AssetType::Model, path)) Load(path.c_str());
 }
 
 void ModelRenderer::Serialize(nlohmann::json& data) const

@@ -5,6 +5,7 @@
 #include "GameObject.h"
 #include "JsonUtil.h"
 #include "Registry.h"
+#include "AssetBrowser.h"
 
 void AnimationModel::Draw()
 {
@@ -110,6 +111,15 @@ void AnimationModel::Load(const char* FileName)
 		cbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 		cbd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 		Renderer::GetDevice()->CreateBuffer(&cbd, nullptr, &m_BoneBuffer);
+
+		// アニメーションを再生する前でも崩れて見えないよう、単位行列（元の形）で埋めておく
+		D3D11_MAPPED_SUBRESOURCE ms;
+		if (SUCCEEDED(Renderer::GetDeviceContext()->Map(m_BoneBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &ms)))
+		{
+			XMFLOAT4X4* mat = (XMFLOAT4X4*)ms.pData;
+			for (int i = 0; i < MAX_BONE; i++) XMStoreFloat4x4(&mat[i], XMMatrixIdentity());
+			Renderer::GetDeviceContext()->Unmap(m_BoneBuffer, 0);
+		}
 	}
 
 	for (unsigned int m = 0; m < m_AiScene->mNumMeshes; m++)
@@ -217,8 +227,11 @@ void AnimationModel::Load(const char* FileName)
 void AnimationModel::LoadAnimation(const char* FileName, const char* Name)
 {
 	m_AnimationFiles.push_back({ Name, FileName });
+
+
 	m_Animation[Name] = aiImportFile(FileName, aiProcess_ConvertToLeftHanded);
 	assert(m_Animation[Name]);
+
 }
 
 
@@ -411,9 +424,26 @@ void AnimationModel::UpdateBoneMatrix(aiNode* node, aiMatrix4x4 matrix)
 
 void AnimationModel::OnInspectorGUI()
 {
-	ImGui::Text("Model: %s", m_FileName.c_str());
+	std::string path;
+
+	ImGui::Text("Model: %s", m_FileName.empty() ? "(なし) ← .fbx をドロップ" : m_FileName.c_str());
+	if (m_AiScene == nullptr)
+	{
+		if (AssetBrowser::AcceptDrop(AssetBrowser::AssetType::AnimationModel, path)) Load(path.c_str());
+		return;
+	}
+
+	ImGui::Text("Animations:");
 	for (auto& animation : m_AnimationFiles)
 		ImGui::BulletText("%s : %s", animation.first.c_str(), animation.second.c_str());
+
+	// アニメーションはファイル名を名前にして追加（Akai_Run.fbx → "Akai_Run"）
+	ImGui::TextDisabled("  ＋ アニメーションの .fbx をここにドロップ");
+	if (AssetBrowser::AcceptDrop(AssetBrowser::AssetType::AnimationModel, path))
+	{
+		std::string name = AssetBrowser::GetStem(path);
+		if (!HasAnimation(name.c_str())) LoadAnimation(path.c_str(), name.c_str());
+	}
 }
 
 void AnimationModel::Serialize(nlohmann::json& data) const

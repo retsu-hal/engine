@@ -7,6 +7,7 @@
 #include "TitleScene.h"
 #include "Audio.h"
 #include "ModelRenderer.h"
+#include "PrimitiveRenderer.h"
 #include "ShaderManager.h"
 #include "TextureManager.h"
 #include "Collider.h"
@@ -76,7 +77,8 @@ void Manager::Uninit()
 		delete m_Scene;
 	}
 
-	ModelRenderer::UnloadAll();	
+	ModelRenderer::UnloadAll();
+	PrimitiveRenderer::UnloadAll();	
 	ShaderManager::Unload();
 	TextureManager::Unload();
 
