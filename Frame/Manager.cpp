@@ -124,11 +124,9 @@ void Manager::Update()
 			}
 
 			//ゲームオブジェクトの削除
-			for (GameObject* gameObject : m_GameObjects)
-			{
-				gameObject->Uninit();
-				delete gameObject;
-			}
+			//先に全員の Uninit を済ませてから delete する（Uninit 中に他のオブジェクトを触っても安全なように）
+			for (GameObject* gameObject : m_GameObjects) gameObject->Uninit();
+			for (GameObject* gameObject : m_GameObjects) delete gameObject;
 			m_GameObjects.clear();
 
 			Profiler::Clear();
@@ -214,4 +212,11 @@ GameObject* Manager::FindGameObjectByID(unsigned int id)
 		if (object->GetID() == id && !object->IsDestroyed()) return object;
 	}
 	return nullptr;
+}
+
+GameObject* Manager::CreateGameObject(const std::string& name)
+{
+	GameObject* gameObject = AddGameObject<GameObject>();
+	gameObject->SetName(name);
+	return gameObject;
 }

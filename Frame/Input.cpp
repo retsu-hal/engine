@@ -486,16 +486,19 @@ bool Input::GetKeyRelease(BYTE KeyCode)
 //======================================================================
 bool Input::GetMousePress(MOUSE_BUTTON Button)
 {
+	if (ImGui::GetCurrentContext() && ImGui::GetIO().WantCaptureMouse) return false;
 	return m_MouseButton[Button];
 }
 
 bool Input::GetMouseTrigger(MOUSE_BUTTON Button)
 {
+	if (ImGui::GetCurrentContext() && ImGui::GetIO().WantCaptureMouse) return false;
 	return (m_MouseButton[Button] && !m_OldMouseButton[Button]);
 }
 
 bool Input::GetMouseRelease(MOUSE_BUTTON Button)
 {
+	if (ImGui::GetCurrentContext() && ImGui::GetIO().WantCaptureMouse) return false;
 	return (!m_MouseButton[Button] && m_OldMouseButton[Button]);
 }
 

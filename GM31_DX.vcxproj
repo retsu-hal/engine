@@ -77,7 +77,7 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <AdditionalIncludeDirectories>$(ProjectDir)Frame;$(ProjectDir)Component;$(ProjectDir)Object;$(ProjectDir)Scene;$(ProjectDir);$(ProjectDir)ThirdParty\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Frame;$(ProjectDir)Component;$(ProjectDir)Object;$(ProjectDir)Script;$(ProjectDir)Scene;$(ProjectDir);$(ProjectDir)ThirdParty\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -93,7 +93,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <AdditionalIncludeDirectories>$(ProjectDir)Frame;$(ProjectDir)Component;$(ProjectDir)Object;$(ProjectDir)Scene;$(ProjectDir);$(ProjectDir)ThirdParty\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Frame;$(ProjectDir)Component;$(ProjectDir)Object;$(ProjectDir)Script;$(ProjectDir)Scene;$(ProjectDir);$(ProjectDir)ThirdParty\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -107,7 +107,7 @@
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <AdditionalIncludeDirectories>$(ProjectDir)Frame;$(ProjectDir)Component;$(ProjectDir)Object;$(ProjectDir)Scene;$(ProjectDir);$(ProjectDir)ThirdParty\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Frame;$(ProjectDir)Component;$(ProjectDir)Object;$(ProjectDir)Script;$(ProjectDir)Scene;$(ProjectDir);$(ProjectDir)ThirdParty\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -125,7 +125,7 @@
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <AdditionalIncludeDirectories>$(ProjectDir)Frame;$(ProjectDir)Component;$(ProjectDir)Object;$(ProjectDir)Scene;$(ProjectDir);$(ProjectDir)ThirdParty\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Frame;$(ProjectDir)Component;$(ProjectDir)Object;$(ProjectDir)Script;$(ProjectDir)Scene;$(ProjectDir);$(ProjectDir)ThirdParty\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -134,7 +134,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\GM31_DX\Frame\EditorGUI.cpp" />
+    <ClCompile Include="Frame\EditorGUI.cpp" />
+    <ClCompile Include="Script\Prefabs.cpp" />
+    <ClCompile Include="Script\BulletController.cpp" />
+    <ClCompile Include="Script\EnemyController.cpp" />
+    <ClCompile Include="Script\PlayerController.cpp" />
     <ClCompile Include="Frame\Gizmo.cpp" />
     <ClCompile Include="Frame\Input.cpp" />
     <ClCompile Include="Frame\Manager.cpp" />
@@ -149,21 +153,15 @@
     <ClCompile Include="Component\ModelRenderer.cpp" />
     <ClCompile Include="Component\Rigidbody.cpp" />
     <ClCompile Include="Component\SpriteAnimation.cpp" />
-    <ClCompile Include="Object\Box.cpp" />
-    <ClCompile Include="Object\Bullet.cpp" />
     <ClCompile Include="Object\Camera.cpp" />
     <ClCompile Include="Object\Cube.cpp" />
-    <ClCompile Include="Object\Enemy.cpp" />
-    <ClCompile Include="Object\Explosion.cpp" />
     <ClCompile Include="Object\Field.cpp" />
     <ClCompile Include="Object\MeshField.cpp" />
     <ClCompile Include="Object\Particle.cpp" />
-    <ClCompile Include="Object\Player.cpp" />
     <ClCompile Include="Object\Polygon2D.cpp" />
     <ClCompile Include="Object\Score.cpp" />
     <ClCompile Include="Object\Shadow.cpp" />
     <ClCompile Include="Object\Sky.cpp" />
-    <ClCompile Include="Object\Tree.cpp" />
     <ClCompile Include="Scene\GameScene.cpp" />
     <ClCompile Include="Scene\ResultScene.cpp" />
     <ClCompile Include="Scene\TitleScene.cpp" />
@@ -177,7 +175,11 @@
     <ClCompile Include="ThirdParty\imgui\imgui_widgets.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\GM31_DX\Frame\EditorGUI.h" />
+    <ClInclude Include="Frame\EditorGUI.h" />
+    <ClInclude Include="Script\Prefabs.h" />
+    <ClInclude Include="Script\BulletController.h" />
+    <ClInclude Include="Script\EnemyController.h" />
+    <ClInclude Include="Script\PlayerController.h" />
     <ClInclude Include="Frame\Component.h" />
     <ClInclude Include="Frame\GameObject.h" />
     <ClInclude Include="Frame\Gizmo.h" />
@@ -196,21 +198,15 @@
     <ClInclude Include="Component\ModelRenderer.h" />
     <ClInclude Include="Component\Rigidbody.h" />
     <ClInclude Include="Component\SpriteAnimation.h" />
-    <ClInclude Include="Object\Box.h" />
-    <ClInclude Include="Object\Bullet.h" />
     <ClInclude Include="Object\Camera.h" />
     <ClInclude Include="Object\Cube.h" />
-    <ClInclude Include="Object\Enemy.h" />
-    <ClInclude Include="Object\Explosion.h" />
     <ClInclude Include="Object\Field.h" />
     <ClInclude Include="Object\MeshField.h" />
     <ClInclude Include="Object\Particle.h" />
-    <ClInclude Include="Object\Player.h" />
     <ClInclude Include="Object\Polygon2D.h" />
     <ClInclude Include="Object\Score.h" />
     <ClInclude Include="Object\Shadow.h" />
     <ClInclude Include="Object\Sky.h" />
-    <ClInclude Include="Object\Tree.h" />
     <ClInclude Include="Scene\GameScene.h" />
     <ClInclude Include="Scene\ResultScene.h" />
     <ClInclude Include="Scene\TitleScene.h" />

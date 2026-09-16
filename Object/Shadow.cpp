@@ -128,15 +128,18 @@ void Shadow::Draw()
 	{
 		MeshField* meshField = Manager::GetGameObject<MeshField>();
 
+		// 親（プレイヤーなど）の子として使うので、ワールド座標で中心を取る
+		Vector3 center = GetWorldPosition();
+
 		for (int z = 0; z <= DIV; z++)
 		{
 			for (int x = 0; x <= DIV; x++)
 			{
 				// ローカル -1〜1 の広がりをワールド座標へ展開する
 				Vector3 world;
-				world.x = m_Position.x + ((float)x / DIV * 2.0f - 1.0f) * m_Scale.x;
-				world.y = m_Position.y;
-				world.z = m_Position.z + (1.0f - (float)z / DIV * 2.0f) * m_Scale.z;
+				world.x = center.x + ((float)x / DIV * 2.0f - 1.0f) * m_Scale.x;
+				world.y = center.y;
+				world.z = center.z + (1.0f - (float)z / DIV * 2.0f) * m_Scale.z;
 
 				// 頂点ごとに地形の高さを拾うので、坂でも影が地面に埋まらない
 				if (meshField)

@@ -93,8 +93,19 @@ public:
 	bool IsDestroyed() const { return m_Destroy; }
 
 	virtual void OnCollision(GameObject* other) {}
+
+	// 当たり判定から呼ぶ。オブジェクト自身と、全コンポーネントに通知する
+	void NotifyCollision(GameObject* other)
+	{
+		OnCollision(other);
+		for (Component* component : m_Components)
+		{
+			if (component != nullptr && component->IsEnabled()) component->OnCollision(other);
+		}
+	}
 	virtual void OnPushed(const Vector3& push) {}
 	int GetLayer() { return m_Layer; }
+	void SetLayer(int layer) { m_Layer = layer; }
 	float GetCameraZ() const { return m_CameraZ; }
 	void CalcCameraZ(Vector3 CameraPos, Vector3 CameraForward)
 	{
@@ -134,7 +145,7 @@ public:
 	{
 		for (Component* component : m_Components)
 		{
-			if (component != nullptr)
+			if (component != nullptr && component->IsEnabled())
 			{
 				component->TryStart();
 				component->Update();
@@ -146,7 +157,7 @@ public:
 	{
 		for (Component* component : m_Components)
 		{
-			if (component != nullptr)
+			if (component != nullptr && component->IsEnabled())
 			{
 				component->Draw();
 			}
@@ -232,4 +243,4 @@ public:
 		XMStoreFloat3((XMFLOAT3*)&pos, GetWorldMatrix().r[3]);
 		return pos;
 	}
-};
+};

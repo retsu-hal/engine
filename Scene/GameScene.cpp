@@ -15,11 +15,9 @@
 #include "Camera.h"
 #include "Field.h"
 #include "MeshField.h"
-#include "Player.h"
-#include "Enemy.h"
-#include "Tree.h"
+#include "Prefabs.h"
+#include "EnemyController.h"
 #include "Sky.h"
-#include "Box.h"
 #include "Score.h"
 
 #include "GameScene.h"
@@ -50,18 +48,16 @@ void GameScene::Init()
 	//Manager::AddGameObject<FIELD>();
 	MeshField* meshField = Manager::AddGameObject<MeshField>();
 
-	Box* box = Manager::AddGameObject<Box>();
-	box->SetPosition({ 2.0f, 0.0f, -3.0f });
-	box->SetScale({ 1.0f, 1.0f, 1.0f });
+	Prefabs::CreateBox({ 2.0f, 0.0f, -3.0f });
 
-	Manager::AddGameObject<Player>();
+	Prefabs::CreatePlayer({ 0.0f, 1.0f, 0.0f });
 
 	////敵の生成
 	for (int i = 0; i < ENEMY_COUNT; i++)
 	{
 		Vector3 pos = { (float)(rand() % 40 - 20),0.0f,(float)(rand() % 40 - 20) };
 		pos.y = meshField->GetHeight(pos);	// 起伏の上に足を置く
-		Manager::AddGameObject<Enemy>()->SetPosition(pos);
+		Prefabs::CreateEnemy(pos);
 	}
 
 
@@ -70,7 +66,7 @@ void GameScene::Init()
 	{
 		Vector3 pos = { (float)(rand() % 40 - 20),0.0f,(float)(rand() % 40 - 20) };
 		pos.y = meshField->GetHeight(pos);	// 起伏の上に足を置く
-		Manager::AddGameObject<Tree>()->SetPosition(pos);
+		Prefabs::CreateTree(pos);
 	}
 
 	//Manager::AddGameObject<Polygon2D>();
@@ -91,7 +87,7 @@ void GameScene::Uninit()
 //==============================================================================
 void GameScene::Update()
 {
-	auto enemies = Manager::GetGameObjects<Enemy>();
+	auto enemies = Manager::FindComponents<EnemyController>();
 
 	/*if (enemies.size() == 0)
 	{
@@ -105,4 +101,4 @@ void GameScene::Update()
 void GameScene::Draw()
 {
 
-}
+}

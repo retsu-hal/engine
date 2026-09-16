@@ -4,9 +4,10 @@
 #include "main.h"
 #include "Profiler.h"
 #include <typeinfo>
+#include <string>
+#include "GameObject.h"
 
 // 前方宣言
-class GameObject;
 class Scene;
 
 class Manager
@@ -48,6 +49,36 @@ public:
 	// GameObject の完全な型が必要なので定義は cpp 側に置く
 	static void RemoveGameObject(GameObject* gameobject);
 
+	// 継承クラスを作らず、空の GameObject にコンポーネントを付けて使う
+	static GameObject* CreateGameObject(const std::string& name);
+
+	// T 型のコンポーネントを持つ最初のものを探す（例: FindComponent<PlayerController>()）
+	template<typename T>
+	static T* FindComponent()
+	{
+		for (GameObject* gameObject : m_GameObjects)
+		{
+			if (gameObject->IsDestroyed()) continue;
+			T* component = gameObject->GetComponent<T>();
+			if (component != nullptr) return component;
+		}
+		return nullptr;
+	}
+
+	// T 型のコンポーネントをすべて集める
+	template<typename T>
+	static std::vector<T*> FindComponents()
+	{
+		std::vector<T*> components;
+		for (GameObject* gameObject : m_GameObjects)
+		{
+			if (gameObject->IsDestroyed()) continue;
+			T* component = gameObject->GetComponent<T>();
+			if (component != nullptr) components.push_back(component);
+		}
+		return components;
+	}
+
 	template<typename T>
 	static T* GetGameObject()
 	{
@@ -87,4 +118,4 @@ public:
 			m_NextScene = new T();
 		}
 	}
-};
+};

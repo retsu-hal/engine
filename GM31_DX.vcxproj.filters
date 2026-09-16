@@ -10,6 +10,9 @@
     <Filter Include="Object">
       <UniqueIdentifier>{34129637-c0f5-423a-8fdf-973c09107029}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Script">
+      <UniqueIdentifier>{7c3e5a1b-2d4f-4e6a-9b8c-1f2e3d4c5b6a}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Scene">
       <UniqueIdentifier>{1a8ddf13-90f9-4bcb-8f69-e26c501622b3}</UniqueIdentifier>
     </Filter>
@@ -25,6 +28,18 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Script\Prefabs.cpp">
+      <Filter>Script</Filter>
+    </ClCompile>
+    <ClCompile Include="Script\BulletController.cpp">
+      <Filter>Script</Filter>
+    </ClCompile>
+    <ClCompile Include="Script\EnemyController.cpp">
+      <Filter>Script</Filter>
+    </ClCompile>
+    <ClCompile Include="Script\PlayerController.cpp">
+      <Filter>Script</Filter>
+    </ClCompile>
     <ClCompile Include="Frame\Gizmo.cpp">
       <Filter>Frame</Filter>
     </ClCompile>
@@ -67,22 +82,10 @@
     <ClCompile Include="Component\SpriteAnimation.cpp">
       <Filter>Component</Filter>
     </ClCompile>
-    <ClCompile Include="Object\Box.cpp">
-      <Filter>Object</Filter>
-    </ClCompile>
-    <ClCompile Include="Object\Bullet.cpp">
-      <Filter>Object</Filter>
-    </ClCompile>
     <ClCompile Include="Object\Camera.cpp">
       <Filter>Object</Filter>
     </ClCompile>
     <ClCompile Include="Object\Cube.cpp">
-      <Filter>Object</Filter>
-    </ClCompile>
-    <ClCompile Include="Object\Enemy.cpp">
-      <Filter>Object</Filter>
-    </ClCompile>
-    <ClCompile Include="Object\Explosion.cpp">
       <Filter>Object</Filter>
     </ClCompile>
     <ClCompile Include="Object\Field.cpp">
@@ -92,9 +95,6 @@
       <Filter>Object</Filter>
     </ClCompile>
     <ClCompile Include="Object\Particle.cpp">
-      <Filter>Object</Filter>
-    </ClCompile>
-    <ClCompile Include="Object\Player.cpp">
       <Filter>Object</Filter>
     </ClCompile>
     <ClCompile Include="Object\Polygon2D.cpp">
@@ -107,9 +107,6 @@
       <Filter>Object</Filter>
     </ClCompile>
     <ClCompile Include="Object\Sky.cpp">
-      <Filter>Object</Filter>
-    </ClCompile>
-    <ClCompile Include="Object\Tree.cpp">
       <Filter>Object</Filter>
     </ClCompile>
     <ClCompile Include="Scene\GameScene.cpp">
@@ -143,11 +140,23 @@
     <ClCompile Include="ThirdParty\imgui\imgui_widgets.cpp">
       <Filter>imgui</Filter>
     </ClCompile>
-    <ClCompile Include="..\GM31_DX\Frame\EditorGUI.cpp">
+    <ClCompile Include="Frame\EditorGUI.cpp">
       <Filter>Frame</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Script\Prefabs.h">
+      <Filter>Script</Filter>
+    </ClInclude>
+    <ClInclude Include="Script\BulletController.h">
+      <Filter>Script</Filter>
+    </ClInclude>
+    <ClInclude Include="Script\EnemyController.h">
+      <Filter>Script</Filter>
+    </ClInclude>
+    <ClInclude Include="Script\PlayerController.h">
+      <Filter>Script</Filter>
+    </ClInclude>
     <ClInclude Include="Frame\Gizmo.h">
       <Filter>Frame</Filter>
     </ClInclude>
@@ -193,22 +202,10 @@
     <ClInclude Include="Component\SpriteAnimation.h">
       <Filter>Component</Filter>
     </ClInclude>
-    <ClInclude Include="Object\Box.h">
-      <Filter>Object</Filter>
-    </ClInclude>
-    <ClInclude Include="Object\Bullet.h">
-      <Filter>Object</Filter>
-    </ClInclude>
     <ClInclude Include="Object\Camera.h">
       <Filter>Object</Filter>
     </ClInclude>
     <ClInclude Include="Object\Cube.h">
-      <Filter>Object</Filter>
-    </ClInclude>
-    <ClInclude Include="Object\Enemy.h">
-      <Filter>Object</Filter>
-    </ClInclude>
-    <ClInclude Include="Object\Explosion.h">
       <Filter>Object</Filter>
     </ClInclude>
     <ClInclude Include="Object\Field.h">
@@ -218,9 +215,6 @@
       <Filter>Object</Filter>
     </ClInclude>
     <ClInclude Include="Object\Particle.h">
-      <Filter>Object</Filter>
-    </ClInclude>
-    <ClInclude Include="Object\Player.h">
       <Filter>Object</Filter>
     </ClInclude>
     <ClInclude Include="Object\Polygon2D.h">
@@ -233,9 +227,6 @@
       <Filter>Object</Filter>
     </ClInclude>
     <ClInclude Include="Object\Sky.h">
-      <Filter>Object</Filter>
-    </ClInclude>
-    <ClInclude Include="Object\Tree.h">
       <Filter>Object</Filter>
     </ClInclude>
     <ClInclude Include="Scene\GameScene.h">
@@ -281,7 +272,7 @@
     <ClInclude Include="ThirdParty\imgui\imstb_truetype.h">
       <Filter>imgui</Filter>
     </ClInclude>
-    <ClInclude Include="..\GM31_DX\Frame\EditorGUI.h">
+    <ClInclude Include="Frame\EditorGUI.h">
       <Filter>Frame</Filter>
     </ClInclude>
   </ItemGroup>

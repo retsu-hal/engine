@@ -1,6 +1,6 @@
 ﻿#include "Manager.h"
 #include "Camera.h"
-#include "Player.h"
+#include "PlayerController.h"
 
 #define POS_MAX 100.0f
 #define POS_MIN -100.0f
@@ -24,9 +24,9 @@ void CAMERA::Uninit()
 
 void CAMERA::Update()
 {
-	Player* player = Manager::GetGameObject<Player>();
-	Vector3 playerPos = player->GetPosition();
-	Vector3 playerForward = player->GetForward();
+	PlayerController* player = Manager::FindComponent<PlayerController>();
+	if (player == nullptr) return;
+	Vector3 playerPos = player->GetGameObject()->GetWorldPosition();
 
 	float dt = Manager::GetDeltaTime();
 	if(Input::GetKeyPress(VK_RIGHT))

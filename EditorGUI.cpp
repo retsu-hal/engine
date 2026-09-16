@@ -1,4 +1,4 @@
-#include "main.h"
+﻿#include "main.h"
 #include "EditorGUI.h"
 #include "Manager.h"
 #include "GameObject.h"
@@ -167,10 +167,13 @@ void EditorGUI::DrawInspector()
 		std::string label = TypeName(typeid(*component).name());
 		if (ImGui::CollapsingHeader(label.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
 		{
+			bool enabled = component->IsEnabled();
+			if (ImGui::Checkbox("Enabled", &enabled)) component->SetEnabled(enabled);
+
 			component->OnInspectorGUI();
 		}
 		ImGui::PopID();
 	}
 
 	ImGui::End();
-}
+}
