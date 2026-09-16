@@ -140,6 +140,9 @@
     <ClCompile Include="ThirdParty\imgui\imgui_widgets.cpp">
       <Filter>imgui</Filter>
     </ClCompile>
+    <ClCompile Include="Frame\EditorCamera.cpp">
+      <Filter>Frame</Filter>
+    </ClCompile>
     <ClCompile Include="Frame\EditorGUI.cpp">
       <Filter>Frame</Filter>
     </ClCompile>
@@ -271,6 +274,9 @@
     </ClInclude>
     <ClInclude Include="ThirdParty\imgui\imstb_truetype.h">
       <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="Frame\EditorCamera.h">
+      <Filter>Frame</Filter>
     </ClInclude>
     <ClInclude Include="Frame\EditorGUI.h">
       <Filter>Frame</Filter>

@@ -134,11 +134,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Frame\EditorGUI.cpp" />
     <ClCompile Include="Script\Prefabs.cpp" />
     <ClCompile Include="Script\BulletController.cpp" />
     <ClCompile Include="Script\EnemyController.cpp" />
     <ClCompile Include="Script\PlayerController.cpp" />
+    <ClCompile Include="Frame\EditorCamera.cpp" />
+    <ClCompile Include="Frame\EditorGUI.cpp" />
     <ClCompile Include="Frame\Gizmo.cpp" />
     <ClCompile Include="Frame\Input.cpp" />
     <ClCompile Include="Frame\Manager.cpp" />
@@ -175,11 +176,12 @@
     <ClCompile Include="ThirdParty\imgui\imgui_widgets.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Frame\EditorGUI.h" />
     <ClInclude Include="Script\Prefabs.h" />
     <ClInclude Include="Script\BulletController.h" />
     <ClInclude Include="Script\EnemyController.h" />
     <ClInclude Include="Script\PlayerController.h" />
+    <ClInclude Include="Frame\EditorCamera.h" />
+    <ClInclude Include="Frame\EditorGUI.h" />
     <ClInclude Include="Frame\Component.h" />
     <ClInclude Include="Frame\GameObject.h" />
     <ClInclude Include="Frame\Gizmo.h" />

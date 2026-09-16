@@ -72,12 +72,20 @@ private:
 	static ID3D11BlendState*		m_BlendStateAdd;
 	static ID3D11BlendState*		m_BlendStateATC;
 
+	// シーンビュー用（ゲーム画面をいったんテクスチャに描き、ImGui のウィンドウに表示する）
+	static ID3D11RenderTargetView*   m_SceneRTV;
+	static ID3D11ShaderResourceView* m_SceneSRV;
+	static ID3D11DepthStencilView*   m_SceneDSV;
+
 
 
 public:
 	static void Init();
 	static void Uninit();
 	static void Begin();
+	static void BeginScene();		// シーン用テクスチャに描き始める
+	static void BeginBackBuffer();	// 画面（バックバッファ）に切り替える。ImGui はこちらに描く
+	static ID3D11ShaderResourceView* GetSceneTexture() { return m_SceneSRV; }
 	static void End();
 
 	static void SetDepthEnable(bool Enable);

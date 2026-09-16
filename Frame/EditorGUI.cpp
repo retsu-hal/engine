@@ -3,6 +3,9 @@
 #include "Manager.h"
 #include "GameObject.h"
 #include "Profiler.h"	// TypeName
+#include "Renderer.h"
+#include "Camera.h"
+#include "EditorCamera.h"
 #include <typeinfo>
 #include <cstring>
 
@@ -11,10 +14,121 @@ GameObject* EditorGUI::m_DragChild = nullptr;
 GameObject* EditorGUI::m_DropParent = nullptr;
 bool         EditorGUI::m_HasDrop = false;
 
+PlayState    EditorGUI::m_PlayState = PlayState::Play;	// 起動直後はこれまでどおりゲームを動かす
+int          EditorGUI::m_StepFrames = 0;
+bool         EditorGUI::m_SceneHovered = false;
+ImDrawList*  EditorGUI::m_SceneDrawList = nullptr;
+float        EditorGUI::m_SceneMin[2] = { 0.0f, 0.0f };
+float        EditorGUI::m_SceneMax[2] = { 0.0f, 0.0f };
+
 void EditorGUI::Draw()
 {
+	DrawToolbar();
+	DrawSceneView();
 	DrawHierarchy();
 	DrawInspector();
+}
+
+bool EditorGUI::ConsumeGameUpdate()
+{
+	if (m_PlayState == PlayState::Play) return true;
+
+	if (m_StepFrames > 0)
+	{
+		m_StepFrames--;
+		return true;
+	}
+	return false;
+}
+
+//=============================================================
+// ツールバー（Play / Pause / Step / Stop）
+//=============================================================
+void EditorGUI::DrawToolbar()
+{
+	if (!ImGui::BeginMainMenuBar()) return;
+
+	// 今の状態のボタンを色付きにする
+	auto stateButton = [](const char* label, bool active) -> bool
+	{
+		if (active) ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+		bool pressed = ImGui::Button(label);
+		if (active) ImGui::PopStyleColor();
+		return pressed;
+	};
+
+	if (stateButton("Play", m_PlayState == PlayState::Play))
+	{
+		m_PlayState = PlayState::Play;
+	}
+
+	if (stateButton("Pause", m_PlayState == PlayState::Pause))
+	{
+		if (m_PlayState == PlayState::Play) m_PlayState = PlayState::Pause;
+	}
+
+	ImGui::BeginDisabled(m_PlayState == PlayState::Play);
+	if (ImGui::Button("Step")) RequestStep(1);
+	ImGui::EndDisabled();
+
+	if (ImGui::Button("Stop"))
+	{
+		// シーンを読み込み直して最初の状態に戻す（読み込み後の1フレーム更新は Manager 側で行う）
+		m_PlayState = PlayState::Edit;
+		m_StepFrames = 0;
+		Manager::ReloadScene();
+	}
+
+	const char* stateText = "Edit";
+	if (m_PlayState == PlayState::Play)  stateText = "Playing";
+	if (m_PlayState == PlayState::Pause) stateText = "Paused";
+	ImGui::TextDisabled("|  %s  |  %.1f FPS", stateText, ImGui::GetIO().Framerate);
+
+	ImGui::EndMainMenuBar();
+}
+
+//=============================================================
+// シーンビュー
+//=============================================================
+void EditorGUI::DrawSceneView()
+{
+	m_SceneHovered = false;
+	m_SceneDrawList = nullptr;
+
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+	bool visible = ImGui::Begin("Scene");
+	ImGui::PopStyleVar();
+
+	if (visible)
+	{
+		// 画面の縦横比を保ったまま、ウィンドウに収まる大きさで表示する
+		ImVec2 avail = ImGui::GetContentRegionAvail();
+		float aspect = (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT;
+		ImVec2 size(avail.x, avail.x / aspect);
+		if (size.y > avail.y) size = ImVec2(avail.y * aspect, avail.y);
+		if (size.x < 1.0f || size.y < 1.0f) size = ImVec2(1.0f, 1.0f);
+
+		// 中央寄せ
+		ImVec2 cursor = ImGui::GetCursorPos();
+		ImGui::SetCursorPos(ImVec2(cursor.x + (avail.x - size.x) * 0.5f, cursor.y + (avail.y - size.y) * 0.5f));
+
+		ImGui::Image((ImTextureID)(intptr_t)Renderer::GetSceneTexture(), size);
+
+		ImVec2 min = ImGui::GetItemRectMin();
+		ImVec2 max = ImGui::GetItemRectMax();
+		m_SceneMin[0] = min.x; m_SceneMin[1] = min.y;
+		m_SceneMax[0] = max.x; m_SceneMax[1] = max.y;
+		m_SceneHovered = ImGui::IsItemHovered();
+		m_SceneDrawList = ImGui::GetWindowDrawList();
+
+		// 左上に操作ヒント
+		if (UseEditorCamera())
+		{
+			m_SceneDrawList->AddText(ImVec2(min.x + 8.0f, min.y + 6.0f), IM_COL32(255, 255, 255, 200),
+				"右ドラッグ: 視点  右ドラッグ+WASD/QE: 移動  ホイール: 前後");
+		}
+	}
+	ImGui::End();
 }
 
 //=============================================================
@@ -120,6 +234,10 @@ void EditorGUI::DrawInspector()
 	if (object == nullptr)
 	{
 		ImGui::TextDisabled("Hierarchy でオブジェクトを選択してください");
+		if (ImGui::CollapsingHeader("Editor Camera"))
+		{
+			EditorCamera::OnInspectorGUI();
+		}
 		ImGui::End();
 		return;
 	}
@@ -176,4 +294,4 @@ void EditorGUI::DrawInspector()
 	}
 
 	ImGui::End();
-}
+}

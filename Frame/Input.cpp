@@ -1,6 +1,7 @@
 ﻿
 #include "main.h"
 #include "Input.h"
+#include "EditorGUI.h"
 
 #include <windowsx.h>
 
@@ -484,21 +485,29 @@ bool Input::GetKeyRelease(BYTE KeyCode)
 //======================================================================
 // マウスボタン
 //======================================================================
+// ImGui のウィンドウを操作しているときはゲームにクリックを渡さない
+// ただしシーンビュー（ゲーム画面）の上はゲームの操作として扱う
+static bool IsMouseBlockedByEditor()
+{
+	if (ImGui::GetCurrentContext() == nullptr) return false;
+	return ImGui::GetIO().WantCaptureMouse && !EditorGUI::IsSceneViewHovered();
+}
+
 bool Input::GetMousePress(MOUSE_BUTTON Button)
 {
-	if (ImGui::GetCurrentContext() && ImGui::GetIO().WantCaptureMouse) return false;
+	if (IsMouseBlockedByEditor()) return false;
 	return m_MouseButton[Button];
 }
 
 bool Input::GetMouseTrigger(MOUSE_BUTTON Button)
 {
-	if (ImGui::GetCurrentContext() && ImGui::GetIO().WantCaptureMouse) return false;
+	if (IsMouseBlockedByEditor()) return false;
 	return (m_MouseButton[Button] && !m_OldMouseButton[Button]);
 }
 
 bool Input::GetMouseRelease(MOUSE_BUTTON Button)
 {
-	if (ImGui::GetCurrentContext() && ImGui::GetIO().WantCaptureMouse) return false;
+	if (IsMouseBlockedByEditor()) return false;
 	return (!m_MouseButton[Button] && m_OldMouseButton[Button]);
 }
 
@@ -548,4 +557,4 @@ bool Input::IsMouseVisible()
 bool Input::IsMouseConnected()
 {
 	return GetSystemMetrics(SM_MOUSEPRESENT) != 0;
-}
+}

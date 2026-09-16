@@ -2,6 +2,8 @@
 #include "Manager.h"
 #include "Camera.h"
 #include "Gizmo.h"
+#include "EditorGUI.h"
+#include "EditorCamera.h"
 
 static const Vector3 AXIS_X(1.0f, 0.0f, 0.0f);
 static const Vector3 AXIS_Y(0.0f, 1.0f, 0.0f);
@@ -27,8 +29,15 @@ static XMVECTOR ToClip(const Vector3& p, const XMMATRIX& viewProj)
 	return XMVector4Transform(XMVectorSet(p.x, p.y, p.z, 1.0f), viewProj);
 }
 
+//描画先の四角（シーンビューの画像の位置と大きさ）
+struct GizmoRect
+{
+	ImVec2 Pos;
+	ImVec2 Size;
+};
+
 //クリップ座標 → 画面座標（ピクセル）
-static ImVec2 ToScreen(XMVECTOR clip, const ImGuiViewport* vp)
+static ImVec2 ToScreen(XMVECTOR clip, const GizmoRect* vp)
 {
 	float w = XMVectorGetW(clip);
 	float x = XMVectorGetX(clip) / w;
@@ -51,12 +60,30 @@ void Gizmo::Uninit()
 //=============================================================
 void Gizmo::Draw()
 {
+#if _DEBUG
+	ImGui::Begin("Gizmo");
+	ImGui::Checkbox("Show (F1)", &m_Enable);
+	ImGui::SliderFloat("Thickness", &m_Thickness, 1.0f, 5.0f);
+	ImGui::Text("Lines: %d", (int)m_Lines.size());
+	ImGui::End();
+#endif
+
 	CAMERA* camera = Manager::GetGameObject<CAMERA>();
-	if (m_Enable && camera)
+	ImDrawList* drawList = EditorGUI::GetSceneDrawList();	//シーンビューのウィンドウに描く
+	bool useEditorCamera = EditorGUI::UseEditorCamera() && EditorCamera::IsInitialized();
+
+	if (m_Enable && drawList && (camera || useEditorCamera))
 	{
-		XMMATRIX viewProj = camera->GetViewMatrix() * camera->GetProjectionMatrix();
-		ImDrawList* drawList = ImGui::GetBackgroundDrawList();	//ImGuiのウィンドウより奥に描く
-		const ImGuiViewport* vp = ImGui::GetMainViewport();
+		XMMATRIX viewProj = useEditorCamera
+			? EditorCamera::GetViewMatrix() * EditorCamera::GetProjectionMatrix()
+			: camera->GetViewMatrix() * camera->GetProjectionMatrix();
+
+		float minX, minY, maxX, maxY;
+		EditorGUI::GetSceneRect(&minX, &minY, &maxX, &maxY);
+		GizmoRect rect{ ImVec2(minX, minY), ImVec2(maxX - minX, maxY - minY) };
+		const GizmoRect* vp = &rect;
+
+		drawList->PushClipRect(ImVec2(minX, minY), ImVec2(maxX, maxY), true);	//画像の外にはみ出さない
 
 		for (const Line& line : m_Lines)
 		{
@@ -79,6 +106,8 @@ void Gizmo::Draw()
 			if (XMVectorGetZ(p) < 0.0f) continue;	//カメラの後ろ
 			drawList->AddText(ToScreen(p, vp), label.Color, label.Text.c_str());
 		}
+
+		drawList->PopClipRect();
 	}
 
 	m_Lines.clear();

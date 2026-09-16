@@ -5,6 +5,7 @@
 #include "Profiler.h"
 #include <typeinfo>
 #include <string>
+#include <functional>
 #include "GameObject.h"
 
 // 前方宣言
@@ -19,6 +20,8 @@ private:
 	static float m_DeltaTime;
 	static Scene* m_Scene;
 	static Scene* m_NextScene;
+	static std::function<Scene*()> m_SceneFactory;		// 今のシーンを作り直すための関数（Stop で使う）
+	static std::function<Scene*()> m_NextSceneFactory;
 	static float m_ChangeSceneTime;
 
 public:
@@ -51,6 +54,9 @@ public:
 
 	// 継承クラスを作らず、空の GameObject にコンポーネントを付けて使う
 	static GameObject* CreateGameObject(const std::string& name);
+
+	// 今のシーンを最初から読み込み直す
+	static void ReloadScene();
 
 	// T 型のコンポーネントを持つ最初のものを探す（例: FindComponent<PlayerController>()）
 	template<typename T>
@@ -116,6 +122,7 @@ public:
 		{
 			m_ChangeSceneTime = Time;
 			m_NextScene = new T();
+			m_NextSceneFactory = []() -> Scene* { return new T(); };
 		}
 	}
 };

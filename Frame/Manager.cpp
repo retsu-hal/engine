@@ -12,12 +12,15 @@
 #include "Collider.h"
 #include "Gizmo.h"
 #include "EditorGUI.h"
+#include "EditorCamera.h"
 
 
 //staticメンバー変数はcppで定義する必要がある
 std::list<GameObject* > Manager::m_GameObjects;
 Scene* Manager::m_Scene=nullptr;
 Scene* Manager::m_NextScene=nullptr;
+std::function<Scene*()> Manager::m_SceneFactory;
+std::function<Scene*()> Manager::m_NextSceneFactory;
 float Manager::m_ChangeSceneTime = 5.0f;
 
 float Manager::m_DeltaTime = 1.0f / 60.0f;
@@ -96,12 +99,16 @@ void Manager::Update()
 	if (Input::GetKeyTrigger(VK_F1)) Gizmo::SetEnable(!Gizmo::IsEnable());
 
 
-	if (m_Scene != nullptr)	m_Scene->Update();
+	// Play 中（または Step 要求があるとき）だけゲームを進める
+	if (EditorGUI::ConsumeGameUpdate())
+	{
+		if (m_Scene != nullptr)	m_Scene->Update();
 
-	for (GameObject* gameObject : m_GameObjects) gameObject->Update();
+		for (GameObject* gameObject : m_GameObjects) gameObject->Update();
 
-	//当たり判定（各オブジェクトのUpdateで移動し終わってから、まとめて押し出す）
-	Collider::Check();
+		//当たり判定（各オブジェクトのUpdateで移動し終わってから、まとめて押し出す）
+		Collider::Check();
+	}
 
 	//ゲームオブジェクトの削除　【ラムダ式】
 	m_GameObjects.remove_if([](GameObject* object)
@@ -131,20 +138,35 @@ void Manager::Update()
 
 			Profiler::Clear();
 			m_Scene = m_NextScene;
+			m_SceneFactory = m_NextSceneFactory;
 			{
 				ScopedSceneTimer sceneTimer;	// シーン全体の実ロード時間(実経過)
 				m_Scene->Init();
 			}
 			Profiler::Dump();
 			m_NextScene = nullptr;
+
+			// 止まっている状態で読み込んだときも、1フレームだけ更新してカメラやアニメーションを初期状態にする
+			if (EditorGUI::GetPlayState() != PlayState::Play) EditorGUI::RequestStep(1);
 		}
 	}
+	// エディタカメラ（初回はゲームカメラの位置から始める）
+	if (!EditorCamera::IsInitialized())
+	{
+		if (CAMERA* camera = GetGameObject<CAMERA>())
+			EditorCamera::InitFrom(camera->GetPosition(), camera->GetTarget());
+	}
+	if (EditorGUI::UseEditorCamera()) EditorCamera::Update(EditorGUI::IsSceneViewHovered());
+
 	EditorGUI::Draw();
 };
 
 void Manager::Draw()
 {
-	Renderer::Begin();
+	// ゲーム画面はシーン用テクスチャに描き、最後に ImGui のシーンビューで表示する
+	Renderer::BeginScene();
+
+	bool useEditorCamera = EditorGUI::UseEditorCamera() && EditorCamera::IsInitialized();
 
 
 	
@@ -154,8 +176,8 @@ void Manager::Draw()
 
 	if (camera)
 	{
-		Vector3 forward = camera->GetForward();
-		Vector3 position = camera->GetPosition();
+		Vector3 forward = useEditorCamera ? EditorCamera::GetForward() : camera->GetForward();
+		Vector3 position = useEditorCamera ? EditorCamera::GetPosition() : camera->GetPosition();
 
 		//Z値計算
 		for (GameObject* gameObject : m_GameObjects)
@@ -181,14 +203,22 @@ void Manager::Draw()
 		{
 			if (gameObject != nullptr)
 			{
-				if(gameObject->GetLayer()==layer)
-				gameObject->Draw();
+				if (gameObject->GetLayer() == layer)
+				{
+					gameObject->Draw();
+
+					// ゲームカメラが行列を設定した直後に、エディタカメラの行列で上書きする
+					if (useEditorCamera && dynamic_cast<CAMERA*>(gameObject)) EditorCamera::Apply();
+				}
 			}
 		}
 	}
 	
 	//デバッグ表示（ImGui::Render より前に線をためる）
 	Collider::DrawGizmo();
+
+	// ここからは画面（バックバッファ）に ImGui を描く
+	Renderer::BeginBackBuffer();
 	Gizmo::Draw();
 
 	ImGui::Render();
@@ -219,4 +249,14 @@ GameObject* Manager::CreateGameObject(const std::string& name)
 	GameObject* gameObject = AddGameObject<GameObject>();
 	gameObject->SetName(name);
 	return gameObject;
+}
+
+void Manager::ReloadScene()
+{
+	if (m_SceneFactory && m_NextScene == nullptr)
+	{
+		m_NextScene = m_SceneFactory();
+		m_NextSceneFactory = m_SceneFactory;
+		m_ChangeSceneTime = 0.0f;
+	}
 }

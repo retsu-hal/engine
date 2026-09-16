@@ -27,6 +27,10 @@ ID3D11BlendState*		Renderer::m_BlendState{};
 ID3D11BlendState*		Renderer::m_BlendStateAdd{};
 ID3D11BlendState*		Renderer::m_BlendStateATC{};
 
+ID3D11RenderTargetView*   Renderer::m_SceneRTV{};
+ID3D11ShaderResourceView* Renderer::m_SceneSRV{};
+ID3D11DepthStencilView*   Renderer::m_SceneDSV{};
+
 
 
 
@@ -101,6 +105,34 @@ void Renderer::Init()
 
 
 	m_DeviceContext->OMSetRenderTargets(1, &m_RenderTargetView, m_DepthStencilView);
+
+
+	// シーンビュー用のレンダーターゲット（画面と同じ解像度で作り、ImGui 側で縮小表示する）
+	{
+		D3D11_TEXTURE2D_DESC desc{};
+		desc.Width = SCREEN_WIDTH;
+		desc.Height = SCREEN_HEIGHT;
+		desc.MipLevels = 1;
+		desc.ArraySize = 1;
+		desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		desc.SampleDesc.Count = 1;
+		desc.Usage = D3D11_USAGE_DEFAULT;
+		desc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+
+		ID3D11Texture2D* colorTexture{};
+		m_Device->CreateTexture2D(&desc, NULL, &colorTexture);
+		m_Device->CreateRenderTargetView(colorTexture, NULL, &m_SceneRTV);
+		m_Device->CreateShaderResourceView(colorTexture, NULL, &m_SceneSRV);
+		colorTexture->Release();
+
+		desc.Format = DXGI_FORMAT_D16_UNORM;
+		desc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+
+		ID3D11Texture2D* depthTexture{};
+		m_Device->CreateTexture2D(&desc, NULL, &depthTexture);
+		m_Device->CreateDepthStencilView(depthTexture, NULL, &m_SceneDSV);
+		depthTexture->Release();
+	}
 
 
 
@@ -265,6 +297,9 @@ void Renderer::Uninit()
 
 
 	m_DeviceContext->ClearState();
+	if (m_SceneRTV) m_SceneRTV->Release();
+	if (m_SceneSRV) m_SceneSRV->Release();
+	if (m_SceneDSV) m_SceneDSV->Release();
 	m_RenderTargetView->Release();
 	m_SwapChain->Release();
 	m_DeviceContext->Release();
@@ -280,6 +315,36 @@ void Renderer::Begin()
 	float clearColor[4] = { 0.0f, 0.5f, 1.0f, 0.1f };
 	m_DeviceContext->ClearRenderTargetView( m_RenderTargetView, clearColor );
 	m_DeviceContext->ClearDepthStencilView( m_DepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
+}
+
+
+
+void Renderer::BeginScene()
+{
+	// 前のフレームで ImGui がシーンテクスチャをシェーダーに刺したままだと、書き込み先にできない警告が出るので外す
+	ID3D11ShaderResourceView* nullSRV[1] = { nullptr };
+	m_DeviceContext->PSSetShaderResources(0, 1, nullSRV);
+
+	m_DeviceContext->OMSetRenderTargets(1, &m_SceneRTV, m_SceneDSV);
+
+	D3D11_VIEWPORT viewport{};
+	viewport.Width = (FLOAT)SCREEN_WIDTH;
+	viewport.Height = (FLOAT)SCREEN_HEIGHT;
+	viewport.MaxDepth = 1.0f;
+	m_DeviceContext->RSSetViewports(1, &viewport);
+
+	float clearColor[4] = { 0.0f, 0.5f, 1.0f, 1.0f };
+	m_DeviceContext->ClearRenderTargetView(m_SceneRTV, clearColor);
+	m_DeviceContext->ClearDepthStencilView(m_SceneDSV, D3D11_CLEAR_DEPTH, 1.0f, 0);
+}
+
+void Renderer::BeginBackBuffer()
+{
+	m_DeviceContext->OMSetRenderTargets(1, &m_RenderTargetView, m_DepthStencilView);
+
+	float clearColor[4] = { 0.12f, 0.12f, 0.14f, 1.0f };
+	m_DeviceContext->ClearRenderTargetView(m_RenderTargetView, clearColor);
+	m_DeviceContext->ClearDepthStencilView(m_DepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
 }
 
 
