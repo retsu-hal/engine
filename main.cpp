@@ -141,6 +141,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	case WM_ACTIVATEAPP:
         break;
 
+	case WM_SIZE:
+		// ウィンドウの大きさとバックバッファをそろえる
+		// （ずれると ImGui の描画が引き伸ばされて、マウスの当たり判定と表示位置が合わなくなる）
+		if (wParam != SIZE_MINIMIZED) Renderer::Resize(LOWORD(lParam), HIWORD(lParam));
+		break;
+
     case WM_SYSKEYDOWN:
     case WM_KEYUP:
     case WM_SYSKEYUP:

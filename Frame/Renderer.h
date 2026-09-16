@@ -77,6 +77,12 @@ private:
 	static ID3D11ShaderResourceView* m_SceneSRV;
 	static ID3D11DepthStencilView*   m_SceneDSV;
 
+	// バックバッファの大きさ（ウィンドウのクライアント領域と同じにしておく）
+	static UINT m_BackBufferWidth;
+	static UINT m_BackBufferHeight;
+
+	static void CreateBackBuffer(UINT width, UINT height);
+
 
 
 public:
@@ -87,6 +93,9 @@ public:
 	static void BeginBackBuffer();	// 画面（バックバッファ）に切り替える。ImGui はこちらに描く
 	static ID3D11ShaderResourceView* GetSceneTexture() { return m_SceneSRV; }
 	static void End();
+
+	// ウィンドウの大きさが変わったらバックバッファも作り直す（WM_SIZE から呼ぶ）
+	static void Resize(UINT width, UINT height);
 
 	static void SetDepthEnable(bool Enable);
 	static void SetAddEnable(bool Enable);
