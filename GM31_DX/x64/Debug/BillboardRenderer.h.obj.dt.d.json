@@ -1,0 +1,12 @@
+{
+    "Version": "1.2",
+    "Data": {
+        "Source": "c:\\users\\retsu\\documents\\2026_hal\\gm31\\gm31_dx\\object\\billboardrenderer.h",
+        "ProvidedModule": "",
+        "Includes": [
+            "c:\\users\\retsu\\documents\\2026_hal\\gm31\\gm31_dx\\frame\\component.h"
+        ],
+        "ImportedModules": [],
+        "ImportedHeaderUnits": []
+    }
+}

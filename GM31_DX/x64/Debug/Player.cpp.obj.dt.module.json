@@ -1,0 +1,14 @@
+{
+    "version": 1,
+    "revision": 0,
+    "rules": [
+        {
+            "primary-output": "GM31_DX\\x64\\Debug\\Player.obj",
+            "outputs": [
+                "GM31_DX\\x64\\Debug\\Player.cpp.obj.dt.module.json",
+                "GM31_DX\\x64\\Debug\\Player.cpp.obj.dt.d.json"
+            ],
+            "requires": []
+        }
+    ]
+}

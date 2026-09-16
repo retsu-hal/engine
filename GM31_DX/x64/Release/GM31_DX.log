@@ -1,0 +1,138 @@
+﻿  animationModel.cpp
+C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\Frame\ShaderManager.h(1,1): warning C4819: ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。データの損失を防ぐために、ファイルを Unicode 形式で保存してください。
+  (ソース ファイル 'Frame/animationModel.cpp' をコンパイルしています)
+  
+  Gizmo.cpp
+C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\Frame\manager.h(47,3): warning C4150: 'GameObject' 型を削除するため delete 演算子が呼び出されましたが、定義がありません。
+  (ソース ファイル 'Frame/Gizmo.cpp' をコンパイルしています)
+      C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\Frame\manager.h(9,7):
+      'GameObject' の宣言を確認してください
+  
+  Profiler.cpp
+  ShaderManager.cpp
+C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\Frame\ShaderManager.cpp(1,1): warning C4819: ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。データの損失を防ぐために、ファイルを Unicode 形式で保存してください。
+C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\Frame\ShaderManager.h(1,1): warning C4819: ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。データの損失を防ぐために、ファイルを Unicode 形式で保存してください。
+  (ソース ファイル 'Frame/ShaderManager.cpp' をコンパイルしています)
+  
+  SpriteAnimation.cpp
+C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\Frame\SpriteAnimation.cpp(1,1): warning C4819: ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。データの損失を防ぐために、ファイルを Unicode 形式で保存してください。
+C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\Frame\manager.h(47,3): warning C4150: 'GameObject' 型を削除するため delete 演算子が呼び出されましたが、定義がありません。
+  (ソース ファイル 'Frame/SpriteAnimation.cpp' をコンパイルしています)
+      C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\Frame\manager.h(9,7):
+      'GameObject' の宣言を確認してください
+  
+C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\Frame\SpriteAnimation.h(1,1): warning C4819: ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。データの損失を防ぐために、ファイルを Unicode 形式で保存してください。
+  (ソース ファイル 'Frame/SpriteAnimation.cpp' をコンパイルしています)
+  
+  TextureManager.cpp
+C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\Frame\TextureManager.cpp(1,1): warning C4819: ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。データの損失を防ぐために、ファイルを Unicode 形式で保存してください。
+  BillboardRenderer.cpp
+C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\Frame\manager.h(47,3): warning C4150: 'GameObject' 型を削除するため delete 演算子が呼び出されましたが、定義がありません。
+  (ソース ファイル 'Object/BillboardRenderer.cpp' をコンパイルしています)
+      C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\Frame\manager.h(9,7):
+      'GameObject' の宣言を確認してください
+  
+C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\Frame\ShaderManager.h(1,1): warning C4819: ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。データの損失を防ぐために、ファイルを Unicode 形式で保存してください。
+  (ソース ファイル 'Object/BillboardRenderer.cpp' をコンパイルしています)
+  
+  Box.cpp
+  Bullet.cpp
+  Camera.cpp
+C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\Frame\manager.h(47,3): warning C4150: 'GameObject' 型を削除するため delete 演算子が呼び出されましたが、定義がありません。
+  (ソース ファイル 'Object/Camera.cpp' をコンパイルしています)
+      C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\Frame\manager.h(9,7):
+      'GameObject' の宣言を確認してください
+  
+  Collider.cpp
+  Cube.cpp
+  Enemy.cpp
+C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\Frame\Manager.h(47,3): warning C4150: 'GameObject' 型を削除するため delete 演算子が呼び出されましたが、定義がありません。
+  (ソース ファイル 'Object/Enemy.cpp' をコンパイルしています)
+      C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\Frame\Manager.h(9,7):
+      'GameObject' の宣言を確認してください
+  
+  Explosion.cpp
+C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\Frame\SpriteAnimation.h(1,1): warning C4819: ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。データの損失を防ぐために、ファイルを Unicode 形式で保存してください。
+  (ソース ファイル 'Object/Explosion.cpp' をコンパイルしています)
+  
+  Field.cpp
+  MeshField.cpp
+  GameScene.cpp
+C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\Frame\manager.h(47,3): warning C4150: 'GameObject' 型を削除するため delete 演算子が呼び出されましたが、定義がありません。
+  (ソース ファイル 'Scene/GameScene.cpp' をコンパイルしています)
+      C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\Frame\manager.h(9,7):
+      'GameObject' の宣言を確認してください
+  
+  main.cpp
+C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\Frame\manager.h(47,3): warning C4150: 'GameObject' 型を削除するため delete 演算子が呼び出されましたが、定義がありません。
+  (ソース ファイル 'main.cpp' をコンパイルしています)
+      C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\Frame\manager.h(9,7):
+      'GameObject' の宣言を確認してください
+  
+  manager.cpp
+C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\Frame\manager.h(47,3): warning C4150: 'GameObject' 型を削除するため delete 演算子が呼び出されましたが、定義がありません。
+  (ソース ファイル 'Frame/manager.cpp' をコンパイルしています)
+      C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\Frame\manager.h(9,7):
+      'GameObject' の宣言を確認してください
+  
+C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\Frame\ShaderManager.h(1,1): warning C4819: ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。データの損失を防ぐために、ファイルを Unicode 形式で保存してください。
+  (ソース ファイル 'Frame/manager.cpp' をコンパイルしています)
+  
+  modelRenderer.cpp
+C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\Frame\ShaderManager.h(1,1): warning C4819: ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。データの損失を防ぐために、ファイルを Unicode 形式で保存してください。
+  (ソース ファイル 'Frame/modelRenderer.cpp' をコンパイルしています)
+  
+  コンパイル中...
+  Particle.cpp
+C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\Frame\manager.h(47,3): warning C4150: 'GameObject' 型を削除するため delete 演算子が呼び出されましたが、定義がありません。
+  (ソース ファイル 'Object/Particle.cpp' をコンパイルしています)
+      C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\Frame\manager.h(9,7):
+      'GameObject' の宣言を確認してください
+  
+  Player.cpp
+  Polygon2D.cpp
+  ResultScene.cpp
+C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\Frame\manager.h(47,3): warning C4150: 'GameObject' 型を削除するため delete 演算子が呼び出されましたが、定義がありません。
+  (ソース ファイル 'Scene/ResultScene.cpp' をコンパイルしています)
+      C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\Frame\manager.h(9,7):
+      'GameObject' の宣言を確認してください
+  
+  Score.cpp
+C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\Frame\manager.h(47,3): warning C4150: 'GameObject' 型を削除するため delete 演算子が呼び出されましたが、定義がありません。
+  (ソース ファイル 'Object/Score.cpp' をコンパイルしています)
+      C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\Frame\manager.h(9,7):
+      'GameObject' の宣言を確認してください
+  
+  Sky.cpp
+  TitleScene.cpp
+C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\Frame\manager.h(47,3): warning C4150: 'GameObject' 型を削除するため delete 演算子が呼び出されましたが、定義がありません。
+  (ソース ファイル 'Scene/TitleScene.cpp' をコンパイルしています)
+      C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\Frame\manager.h(9,7):
+      'GameObject' の宣言を確認してください
+  
+  tree.cpp
+C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\Frame\SpriteAnimation.h(1,1): warning C4819: ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。データの損失を防ぐために、ファイルを Unicode 形式で保存してください。
+  (ソース ファイル 'Object/tree.cpp' をコンパイルしています)
+  
+  Shadow.cpp
+C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\Frame\manager.h(47,3): warning C4150: 'GameObject' 型を削除するため delete 演算子が呼び出されましたが、定義がありません。
+  (ソース ファイル 'Object/Shadow.cpp' をコンパイルしています)
+      C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\Frame\manager.h(9,7):
+      'GameObject' の宣言を確認してください
+  
+  コード生成しています。
+  994 of 3693 functions (26.9%) were compiled, the rest were copied from previous compilation.
+    655 functions were new in current compilation
+    375 functions had inline decision re-evaluated but remain unchanged
+  コード生成が終了しました。
+DirectXTex_Release.lib(DirectXTexD3D11.obj) : warning LNK4099: PDB 'DirectXTex.pdb' が 'DirectXTex_Release.lib(DirectXTexD3D11.obj)' で、または 'C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\x64\Release\DirectXTex.pdb' に見つかりません。デバッグ情報がないものとして、オブジェクトにリンクします。
+DirectXTex_Release.lib(DirectXTexWIC.obj) : warning LNK4099: PDB 'DirectXTex.pdb' が 'DirectXTex_Release.lib(DirectXTexWIC.obj)' で、または 'C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\x64\Release\DirectXTex.pdb' に見つかりません。デバッグ情報がないものとして、オブジェクトにリンクします。
+DirectXTex_Release.lib(DirectXTexImage.obj) : warning LNK4099: PDB 'DirectXTex.pdb' が 'DirectXTex_Release.lib(DirectXTexImage.obj)' で、または 'C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\x64\Release\DirectXTex.pdb' に見つかりません。デバッグ情報がないものとして、オブジェクトにリンクします。
+DirectXTex_Release.lib(DirectXTexUtil.obj) : warning LNK4099: PDB 'DirectXTex.pdb' が 'DirectXTex_Release.lib(DirectXTexUtil.obj)' で、または 'C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\x64\Release\DirectXTex.pdb' に見つかりません。デバッグ情報がないものとして、オブジェクトにリンクします。
+DirectXTex_Release.lib(DirectXTexConvert.obj) : warning LNK4099: PDB 'DirectXTex.pdb' が 'DirectXTex_Release.lib(DirectXTexConvert.obj)' で、または 'C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\x64\Release\DirectXTex.pdb' に見つかりません。デバッグ情報がないものとして、オブジェクトにリンクします。
+DirectXTex_Release.lib(DirectXTexCompress.obj) : warning LNK4099: PDB 'DirectXTex.pdb' が 'DirectXTex_Release.lib(DirectXTexCompress.obj)' で、または 'C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\x64\Release\DirectXTex.pdb' に見つかりません。デバッグ情報がないものとして、オブジェクトにリンクします。
+DirectXTex_Release.lib(DirectXTexMipMaps.obj) : warning LNK4099: PDB 'DirectXTex.pdb' が 'DirectXTex_Release.lib(DirectXTexMipMaps.obj)' で、または 'C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\x64\Release\DirectXTex.pdb' に見つかりません。デバッグ情報がないものとして、オブジェクトにリンクします。
+DirectXTex_Release.lib(BC.obj) : warning LNK4099: PDB 'DirectXTex.pdb' が 'DirectXTex_Release.lib(BC.obj)' で、または 'C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\x64\Release\DirectXTex.pdb' に見つかりません。デバッグ情報がないものとして、オブジェクトにリンクします。
+DirectXTex_Release.lib(BC4BC5.obj) : warning LNK4099: PDB 'DirectXTex.pdb' が 'DirectXTex_Release.lib(BC4BC5.obj)' で、または 'C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\x64\Release\DirectXTex.pdb' に見つかりません。デバッグ情報がないものとして、オブジェクトにリンクします。
+DirectXTex_Release.lib(BC6HBC7.obj) : warning LNK4099: PDB 'DirectXTex.pdb' が 'DirectXTex_Release.lib(BC6HBC7.obj)' で、または 'C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\x64\Release\DirectXTex.pdb' に見つかりません。デバッグ情報がないものとして、オブジェクトにリンクします。
+  GM31_DX.vcxproj -> C:\Users\retsu\Documents\2026_hal\GM31\GM31_DX\x64\Release\GM31_DX.exe
