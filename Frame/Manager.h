@@ -52,6 +52,12 @@ public:
 	// GameObject の完全な型が必要なので定義は cpp 側に置く
 	static void RemoveGameObject(GameObject* gameobject);
 
+	// 同じ名前があれば「Tree(1)」「Tree(2)」のように番号を付けた名前を返す
+	static std::string MakeUniqueName(const std::string& name);
+
+	// シーンの切り替え待ちか（読み込みが終わるまで選択の復元などを待つため）
+	static bool IsSceneChanging() { return m_NextScene != nullptr; }
+
 	// 継承クラスを作らず、空の GameObject にコンポーネントを付けて使う
 	static GameObject* CreateGameObject(const std::string& name);
 

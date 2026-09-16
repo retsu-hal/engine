@@ -19,4 +19,5 @@ namespace Prefabs
 	GameObject* CreateCube(const Vector3& position);
 	GameObject* CreateSphere(const Vector3& position);
 	GameObject* CreateCapsule(const Vector3& position);
+	GameObject* CreateCamera(const Vector3& position);
 }

@@ -4,6 +4,7 @@
 #include "Gizmo.h"
 #include "EditorGUI.h"
 #include "EditorCamera.h"
+#include "CameraComponent.h"
 
 static const Vector3 AXIS_X(1.0f, 0.0f, 0.0f);
 static const Vector3 AXIS_Y(0.0f, 1.0f, 0.0f);
@@ -64,11 +65,14 @@ void Gizmo::Draw()
 	ImDrawList* drawList = EditorGUI::GetSceneDrawList();	//シーンビューのウィンドウに描く
 	bool useEditorCamera = EditorGUI::UseEditorCamera() && EditorCamera::IsInitialized();
 
-	if (m_Enable && drawList && (camera || useEditorCamera))
+	CameraComponent* mainCamera = useEditorCamera ? nullptr : CameraComponent::GetMain();
+
+	if (m_Enable && drawList && (camera || useEditorCamera || mainCamera))
 	{
-		XMMATRIX viewProj = useEditorCamera
-			? EditorCamera::GetViewMatrix() * EditorCamera::GetProjectionMatrix()
-			: camera->GetViewMatrix() * camera->GetProjectionMatrix();
+		XMMATRIX viewProj;
+		if (useEditorCamera)  viewProj = EditorCamera::GetViewMatrix() * EditorCamera::GetProjectionMatrix();
+		else if (mainCamera)  viewProj = mainCamera->GetViewMatrix() * mainCamera->GetProjectionMatrix();
+		else                  viewProj = camera->GetViewMatrix() * camera->GetProjectionMatrix();
 
 		float minX, minY, maxX, maxY;
 		EditorGUI::GetSceneRect(&minX, &minY, &maxX, &maxY);

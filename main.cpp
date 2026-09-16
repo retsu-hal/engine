@@ -9,7 +9,7 @@
 
 
 const char* CLASS_NAME = "AppClass";
-const wchar_t* WINDOW_NAME = L"DX11ゲーム";
+const wchar_t* WINDOW_NAME = L"Engine(仮)";
 
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);

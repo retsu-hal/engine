@@ -13,6 +13,7 @@
 #include "Audio.h"
 #include "Shadow.h"
 #include "PrimitiveRenderer.h"
+#include "CameraComponent.h"
 
 #include "PlayerController.h"
 #include "EnemyController.h"
@@ -190,6 +191,14 @@ GameObject* CreateCapsule(const Vector3& position)
 	collider->SetRadius(0.5f);
 	collider->SetHeight(2.0f);
 	collider->SetStatic(true);
+	return object;
+}
+
+GameObject* CreateCamera(const Vector3& position)
+{
+	GameObject* object = Manager::CreateGameObject("Camera");
+	object->SetPosition(position);
+	object->AddComponent<CameraComponent>();
 	return object;
 }
 

@@ -22,6 +22,9 @@ void PlayerController::Start()
 
 void PlayerController::Update()
 {
+	// Inspector でコンポーネントを外されても落ちないよう、毎フレーム探し直す
+	Start();
+
 	float dt = Manager::GetDeltaTime();
 
 	//------------------------------------------------------------

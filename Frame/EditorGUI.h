@@ -13,6 +13,14 @@ enum class PlayState
 	Pause,	// 一時停止中（Step で1フレームずつ進められる）
 };
 
+// ギズモの操作モード
+enum class GizmoOperation
+{
+	Translate,	// 移動
+	Rotate,		// 回転
+	Scale,		// 拡縮
+};
+
 // ツールバー / Scene / Hierarchy / Inspector ウィンドウ
 class EditorGUI
 {
@@ -31,7 +39,8 @@ private:
 	static float       m_SceneMin[2];
 	static float       m_SceneMax[2];
 
-	static int         m_GizmoOperation;	// 0:移動 1:回転 2:拡縮
+	static GizmoOperation m_GizmoOperation;
+	static void        DrawGizmoToolbar();
 	static bool        m_GizmoLocal;		// true:ローカル座標 false:ワールド座標
 	static bool        m_GizmoActive;		// ギズモにマウスが乗っている／ドラッグ中
 
@@ -40,6 +49,7 @@ private:
 	static bool        m_HasSnapshot;
 	static char        m_SaveAsBuffer[260];
 	static bool        m_OpenSaveAsPopup;
+	static bool        m_DuplicateRequested;	// Hierarchy の右クリックから複製を頼まれた
 
 	static void DrawToolbar();
 	static void DrawFileMenu();
@@ -47,6 +57,23 @@ private:
 	static void DrawTransformGizmo();
 	static void PickObject();
 	static void FocusObject(unsigned int id);
+	static void HandleShortcuts();	// Ctrl+Z/Y 元に戻す/やり直し、Ctrl+D 複製、Delete 削除、F2 名前の変更、Ctrl+P 再生
+	static void DrawEditMenu();
+	static void TrackUndo(bool frameEnd);	// マウス操作の始まりと終わりで元に戻す用の状態を記録
+	static void ApplyHistory(bool redo);	// 元に戻す／やり直しを実行し、選び直す名前を覚える
+
+	// 再生・一時停止・停止（ボタンとショートカットで共通）
+	static void Play();
+	static void TogglePause();
+	static void Stop();
+
+	// 名前の変更
+	static unsigned int m_RenamingID;
+	static char         m_RenameBuffer[128];
+	static bool         m_RenameFocus;
+	static void BeginRename(unsigned int id);
+
+	static std::string  m_RestoreSelectName;	// 元に戻したあと、同じ名前のオブジェクトを選び直す
 	static Vector3 GetDropPosition();
 	static void DrawSceneView();
 	static void DrawHierarchy();

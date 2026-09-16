@@ -76,6 +76,12 @@
     <ClCompile Include="Component\Collider.cpp">
       <Filter>Component</Filter>
     </ClCompile>
+    <ClCompile Include="Component\CameraComponent.cpp">
+      <Filter>Component</Filter>
+    </ClCompile>
+    <ClCompile Include="Frame\UndoSystem.cpp">
+      <Filter>Frame</Filter>
+    </ClCompile>
     <ClCompile Include="Component\PrimitiveRenderer.cpp">
       <Filter>Component</Filter>
     </ClCompile>
@@ -210,6 +216,12 @@
     </ClInclude>
     <ClInclude Include="Component\Collider.h">
       <Filter>Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Component\CameraComponent.h">
+      <Filter>Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Frame\UndoSystem.h">
+      <Filter>Frame</Filter>
     </ClInclude>
     <ClInclude Include="Component\PrimitiveRenderer.h">
       <Filter>Component</Filter>

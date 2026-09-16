@@ -189,6 +189,16 @@ public:
 
 	const std::list<Component*>& GetComponents() const { return m_Components; }
 
+	// コンポーネントを外して破棄する（Update などでリストを回している最中には呼ばないこと）
+	void RemoveComponent(Component* component)
+	{
+		auto it = std::find(m_Components.begin(), m_Components.end(), component);
+		if (it == m_Components.end()) return;
+		m_Components.erase(it);
+		component->Uninit();
+		delete component;
+	}
+
 	// 名前から作ったコンポーネントを付ける（シーン読み込み・Add Component 用）
 	Component* AddComponentInstance(Component* component)
 	{

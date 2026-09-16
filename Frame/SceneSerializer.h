@@ -15,6 +15,9 @@ public:
 	// 今のオブジェクトに追加する形で読み込む（空のシーンの Init から呼ぶ）
 	static bool LoadFromText(const std::string& text);
 	static bool LoadFromFile(const std::string& path);
+
+	// オブジェクトを子ごと複製する（複製した一番上のオブジェクトを返す）
+	static class GameObject* Duplicate(class GameObject* source);
 };
 
 // JSON から中身を作るシーン

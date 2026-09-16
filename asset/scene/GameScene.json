@@ -4,6 +4,130 @@
       "class": "GameObject",
       "components": [
         {
+          "anchorBottom": true,
+          "atc": false,
+          "color": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "enabled": true,
+          "height": 7.0,
+          "mode": 1,
+          "texture": "asset\\texture\\tree.png",
+          "type": "BillboardRenderer",
+          "uv": [
+            0.0,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "width": 7.0
+        },
+        {
+          "enabled": true,
+          "offset": [
+            0.0,
+            3.5,
+            0.0
+          ],
+          "size": [
+            1.0,
+            7.0,
+            1.0
+          ],
+          "static": true,
+          "trigger": false,
+          "type": "BoxCollider"
+        }
+      ],
+      "id": 118,
+      "layer": 2,
+      "name": "Tree(2)",
+      "parent": 0,
+      "position": [
+        7.0,
+        0.020000003278255463,
+        16.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "class": "GameObject",
+      "components": [
+        {
+          "anchorBottom": true,
+          "atc": false,
+          "color": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "enabled": true,
+          "height": 7.0,
+          "mode": 1,
+          "texture": "asset\\texture\\tree.png",
+          "type": "BillboardRenderer",
+          "uv": [
+            0.0,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "width": 7.0
+        },
+        {
+          "enabled": true,
+          "offset": [
+            0.0,
+            3.5,
+            0.0
+          ],
+          "size": [
+            1.0,
+            7.0,
+            1.0
+          ],
+          "static": true,
+          "trigger": false,
+          "type": "BoxCollider"
+        }
+      ],
+      "id": 120,
+      "layer": 2,
+      "name": "Tree(4)",
+      "parent": 0,
+      "position": [
+        2.0,
+        0.0,
+        13.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "class": "GameObject",
+      "components": [
+        {
           "enabled": true,
           "life": 5,
           "speed": 3.0,
@@ -36,18 +160,80 @@
           "useGround": true
         }
       ],
-      "id": 319,
+      "id": 115,
       "layer": 1,
       "name": "Enemy",
       "parent": 0,
       "position": [
-        -18.436992645263672,
-        0.004591388627886772,
-        6.792576789855957
+        -18.718496322631836,
+        0.012295694090425968,
+        6.8962883949279785
       ],
       "rotation": [
         0.0,
-        -1.2178058624267578,
+        -1.2178059816360474,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "class": "GameObject",
+      "components": [
+        {
+          "anchorBottom": true,
+          "atc": false,
+          "color": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "enabled": true,
+          "height": 7.0,
+          "mode": 1,
+          "texture": "asset\\texture\\tree.png",
+          "type": "BillboardRenderer",
+          "uv": [
+            0.0,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "width": 7.0
+        },
+        {
+          "enabled": true,
+          "offset": [
+            0.0,
+            3.5,
+            0.0
+          ],
+          "size": [
+            1.0,
+            7.0,
+            1.0
+          ],
+          "static": true,
+          "trigger": false,
+          "type": "BoxCollider"
+        }
+      ],
+      "id": 117,
+      "layer": 2,
+      "name": "Tree(1)",
+      "parent": 0,
+      "position": [
+        15.0,
+        0.0,
+        2.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
         0.0
       ],
       "scale": [
@@ -58,7 +244,7 @@
     },
     {
       "class": "MeshField",
-      "id": 320,
+      "id": 111,
       "layer": 1,
       "name": "MeshField",
       "parent": 0,
@@ -80,7 +266,7 @@
     },
     {
       "class": "Score",
-      "id": 321,
+      "id": 121,
       "layer": 3,
       "name": "Score",
       "parent": 0,
@@ -151,18 +337,18 @@
           "type": "Audio"
         }
       ],
-      "id": 322,
+      "id": 113,
       "layer": 1,
       "name": "Player",
       "parent": 0,
       "position": [
         0.0,
-        0.20000001788139343,
-        0.0
+        0.6000000238418579,
+        -0.5
       ],
       "rotation": [
         0.0,
-        0.0,
+        3.1415927410125732,
         0.0
       ],
       "scale": [
@@ -173,10 +359,10 @@
     },
     {
       "class": "Shadow",
-      "id": 323,
+      "id": 114,
       "layer": 2,
       "name": "Shadow",
-      "parent": 322,
+      "parent": 113,
       "position": [
         0.0,
         0.0,
@@ -218,7 +404,7 @@
           "type": "BoxCollider"
         }
       ],
-      "id": 324,
+      "id": 112,
       "layer": 1,
       "name": "Box",
       "parent": 0,
@@ -242,6 +428,8 @@
       "class": "GameObject",
       "components": [
         {
+          "anchorBottom": true,
+          "atc": false,
           "color": [
             1.0,
             1.0,
@@ -249,36 +437,43 @@
             1.0
           ],
           "enabled": true,
-          "shape": 2,
-          "type": "PrimitiveRenderer"
+          "height": 7.0,
+          "mode": 1,
+          "texture": "asset\\texture\\tree.png",
+          "type": "BillboardRenderer",
+          "uv": [
+            0.0,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "width": 7.0
         },
         {
           "enabled": true,
-          "height": 2.009999990463257,
           "offset": [
             0.0,
-            0.0,
+            3.5,
             0.0
           ],
-          "radius": 0.5,
+          "size": [
+            1.0,
+            7.0,
+            1.0
+          ],
           "static": true,
           "trigger": false,
-          "type": "CapsuleCollider"
-        },
-        {
-          "enabled": true,
-          "sound": "asset\\audio\\wan.wav",
-          "type": "Audio"
+          "type": "BoxCollider"
         }
       ],
-      "id": 325,
-      "layer": 1,
-      "name": "Capsule",
+      "id": 116,
+      "layer": 2,
+      "name": "Tree",
       "parent": 0,
       "position": [
-        -1.1253151893615723,
-        0.9971714615821838,
-        -4.775601387023926
+        -19.0,
+        0.07999999821186066,
+        -9.0
       ],
       "rotation": [
         0.0,
@@ -293,14 +488,76 @@
     },
     {
       "class": "CAMERA",
-      "id": 326,
+      "id": 109,
       "layer": 0,
       "name": "CAMERA",
       "parent": 0,
       "position": [
         0.0,
-        5.21999979019165,
-        -10.0
+        5.260000228881836,
+        -10.050000190734863
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "class": "GameObject",
+      "components": [
+        {
+          "anchorBottom": true,
+          "atc": false,
+          "color": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "enabled": true,
+          "height": 7.0,
+          "mode": 1,
+          "texture": "asset\\texture\\tree.png",
+          "type": "BillboardRenderer",
+          "uv": [
+            0.0,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "width": 7.0
+        },
+        {
+          "enabled": true,
+          "offset": [
+            0.0,
+            3.5,
+            0.0
+          ],
+          "size": [
+            1.0,
+            7.0,
+            1.0
+          ],
+          "static": true,
+          "trigger": false,
+          "type": "BoxCollider"
+        }
+      ],
+      "id": 119,
+      "layer": 2,
+      "name": "Tree(3)",
+      "parent": 0,
+      "position": [
+        11.0,
+        0.019999999552965164,
+        -16.0
       ],
       "rotation": [
         0.0,
@@ -315,13 +572,13 @@
     },
     {
       "class": "Sky",
-      "id": 327,
+      "id": 110,
       "layer": 1,
       "name": "Sky",
       "parent": 0,
       "position": [
         0.0,
-        5.21999979019165,
+        10.0,
         -10.0
       ],
       "rotation": [

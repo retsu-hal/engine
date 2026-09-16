@@ -28,6 +28,7 @@ void SpriteAnimation::Start()
 
 void SpriteAnimation::Update()
 {
+	m_Renderer = m_GameObject->GetComponent<BillboardRenderer>();	// 外されても落ちないよう毎フレーム探し直す
 	if (m_Renderer == nullptr) return;
 
 	m_Time += Manager::GetDeltaTime();

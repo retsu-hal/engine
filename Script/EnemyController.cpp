@@ -19,6 +19,8 @@ void EnemyController::Start()
 
 void EnemyController::Update()
 {
+	m_ModelRenderer = m_GameObject->GetComponent<ModelRenderer>();	// 外されても落ちないよう毎フレーム探し直す
+
 	float dt = Manager::GetDeltaTime();
 
 	//------------------------------------------------------------

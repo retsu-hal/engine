@@ -8,6 +8,7 @@
 #include "Audio.h"
 #include "ModelRenderer.h"
 #include "PrimitiveRenderer.h"
+#include "CameraComponent.h"
 #include "ShaderManager.h"
 #include "TextureManager.h"
 #include "Collider.h"
@@ -172,17 +173,38 @@ void Manager::Draw()
 	Renderer::BeginScene();
 
 	bool useEditorCamera = EditorGUI::UseEditorCamera() && EditorCamera::IsInitialized();
+	CameraComponent* mainCamera = useEditorCamera ? nullptr : CameraComponent::GetMain();
 
-
-	
+	// 従来の CAMERA が設定した行列を、エディタカメラかカメラコンポーネントで上書きする
+	auto applyOverride = [&]()
+	{
+		if (useEditorCamera) EditorCamera::Apply();
+		else if (mainCamera) mainCamera->Apply();
+	};
+	applyOverride();
 
 	//Z値計算
 	CAMERA* camera = GetGameObject<CAMERA>();
 
-	if (camera)
+	if (camera || useEditorCamera || mainCamera)
 	{
-		Vector3 forward = useEditorCamera ? EditorCamera::GetForward() : camera->GetForward();
-		Vector3 position = useEditorCamera ? EditorCamera::GetPosition() : camera->GetPosition();
+		Vector3 forward, position;
+		if (useEditorCamera)
+		{
+			forward = EditorCamera::GetForward();
+			position = EditorCamera::GetPosition();
+		}
+		else if (mainCamera)
+		{
+			XMMATRIX world = mainCamera->GetGameObject()->GetWorldMatrix();
+			XMStoreFloat3((XMFLOAT3*)&forward, XMVector3Normalize(world.r[2]));
+			position = mainCamera->GetGameObject()->GetWorldPosition();
+		}
+		else
+		{
+			forward = camera->GetForward();
+			position = camera->GetPosition();
+		}
 
 		//Z値計算
 		for (GameObject* gameObject : m_GameObjects)
@@ -212,8 +234,8 @@ void Manager::Draw()
 				{
 					gameObject->Draw();
 
-					// ゲームカメラが行列を設定した直後に、エディタカメラの行列で上書きする
-					if (useEditorCamera && dynamic_cast<CAMERA*>(gameObject)) EditorCamera::Apply();
+					// ゲームカメラが行列を設定した直後に、エディタカメラ／カメラコンポーネントの行列で上書きする
+					if (dynamic_cast<CAMERA*>(gameObject)) applyOverride();
 				}
 			}
 		}
@@ -249,10 +271,42 @@ GameObject* Manager::FindGameObjectByID(unsigned int id)
 	return nullptr;
 }
 
+std::string Manager::MakeUniqueName(const std::string& name)
+{
+	// 「Tree(3)」なら元の名前「Tree」を取り出す
+	std::string base = name;
+	if (!base.empty() && base.back() == ')')
+	{
+		size_t open = base.find_last_of('(');
+		if (open != std::string::npos && open + 1 < base.size() - 1)
+		{
+			std::string number = base.substr(open + 1, base.size() - open - 2);
+			bool digits = !number.empty();
+			for (char c : number) if (c < '0' || c > '9') digits = false;
+			if (digits) base = base.substr(0, open);
+		}
+	}
+
+	auto used = [](const std::string& candidate)
+	{
+		for (GameObject* object : m_GameObjects)
+			if (!object->IsDestroyed() && object->GetName() == candidate) return true;
+		return false;
+	};
+
+	if (!used(name)) return name;
+	for (int i = 1; ; i++)
+	{
+		std::string candidate = base + "(" + std::to_string(i) + ")";
+		if (!used(candidate)) return candidate;
+	}
+}
+
 GameObject* Manager::CreateGameObject(const std::string& name)
 {
+	std::string uniqueName = MakeUniqueName(name);	// 追加する前に調べる（自分自身と比べないように）
 	GameObject* gameObject = AddGameObject<GameObject>();
-	gameObject->SetName(name);
+	gameObject->SetName(uniqueName);
 	return gameObject;
 }
 
@@ -285,7 +339,7 @@ void Manager::LoadSceneText(const std::string& text)
 GameObject* Manager::AddGameObjectInstance(GameObject* gameObject, const std::string& name)
 {
 	if (gameObject == nullptr) return nullptr;
-	gameObject->SetName(name);
+	gameObject->SetName(MakeUniqueName(name));
 	gameObject->Init();
 	m_GameObjects.push_back(gameObject);
 	return gameObject;

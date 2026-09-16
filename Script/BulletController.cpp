@@ -16,6 +16,8 @@ void BulletController::Start()
 
 void BulletController::Update()
 {
+	m_Rigidbody = m_GameObject->GetComponent<Rigidbody>();
+
 	m_Lifetime -= Manager::GetDeltaTime();
 	if (m_Lifetime <= 0.0f)
 	{

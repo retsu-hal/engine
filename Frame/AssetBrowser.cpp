@@ -17,6 +17,8 @@ std::string                      AssetBrowser::m_CurrentFolder = "asset";
 std::vector<AssetBrowser::Entry> AssetBrowser::m_Entries;
 bool                             AssetBrowser::m_NeedRefresh = true;
 float                            AssetBrowser::m_IconSize = 72.0f;
+char                             AssetBrowser::m_NewFolderName[128] = "";
+bool                             AssetBrowser::m_OpenNewFolderPopup = false;
 
 static const char* PAYLOAD_ASSET = "ASSET_PATH";
 
@@ -167,16 +169,44 @@ void AssetBrowser::Draw()
 			start = end + 1;
 		}
 
-		ImGui::SameLine(ImGui::GetWindowWidth() - 190.0f);
-		ImGui::SetNextItemWidth(100.0f);
-		ImGui::SliderFloat("##IconSize", &m_IconSize, 40.0f, 140.0f, "%.0f");
+		ImGui::SameLine(ImGui::GetWindowWidth() - 150.0f);
+		if (ImGui::SmallButton("＋フォルダ"))
+		{
+			strncpy_s(m_NewFolderName, "NewFolder", _TRUNCATE);
+			m_OpenNewFolderPopup = true;
+		}
 		ImGui::SameLine();
 		if (ImGui::SmallButton("更新")) m_NeedRefresh = true;
 	}
 	ImGui::Separator();
 
 	// 並べて表示
-	ImGui::BeginChild("##AssetGrid");
+	// Ctrl+ホイールでアイコンの大きさを変える（ホイールだけのときは今までどおりスクロール）
+	ImGuiIO& io = ImGui::GetIO();
+	bool resize = io.KeyCtrl && ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows);
+	if (resize && io.MouseWheel != 0.0f)
+	{
+		m_IconSize += io.MouseWheel * 8.0f;
+		if (m_IconSize < 32.0f)  m_IconSize = 32.0f;
+		if (m_IconSize > 160.0f) m_IconSize = 160.0f;
+	}
+
+	ImGui::BeginChild("##AssetGrid", ImVec2(0, 0), ImGuiChildFlags_None, resize ? ImGuiWindowFlags_NoScrollWithMouse : 0);
+
+	// 何もないところを右クリック：フォルダを作る
+	if (ImGui::BeginPopupContextWindow("##AssetContext", ImGuiPopupFlags_MouseButtonRight | ImGuiPopupFlags_NoOpenOverItems))
+	{
+		if (ImGui::MenuItem("フォルダを作成"))
+		{
+			strncpy_s(m_NewFolderName, "NewFolder", _TRUNCATE);
+			m_OpenNewFolderPopup = true;
+		}
+		if (ImGui::MenuItem("エクスプローラーで開く"))
+		{
+			ShellExecuteW(nullptr, L"open", Utf8ToWide(m_CurrentFolder).c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+		}
+		ImGui::EndPopup();
+	}
 	float cellWidth = m_IconSize + 16.0f;
 	int columns = (int)(ImGui::GetContentRegionAvail().x / cellWidth);
 	if (columns < 1) columns = 1;
@@ -235,6 +265,42 @@ void AssetBrowser::Draw()
 	if (m_Entries.empty()) ImGui::TextDisabled("表示できるファイルがありません");
 
 	ImGui::EndChild();
+
+	// フォルダ名の入力
+	if (m_OpenNewFolderPopup)
+	{
+		ImGui::OpenPopup("NewFolder");
+		m_OpenNewFolderPopup = false;
+	}
+	if (ImGui::BeginPopupModal("NewFolder", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		ImGui::Text("%s に作るフォルダの名前", m_CurrentFolder.c_str());
+		ImGui::SetNextItemWidth(260.0f);
+		if (ImGui::IsWindowAppearing()) ImGui::SetKeyboardFocusHere();
+		bool enter = ImGui::InputText("##folder", m_NewFolderName, sizeof(m_NewFolderName),
+			ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll);
+
+		std::string name;
+		for (const char* p = m_NewFolderName; *p; p++)
+			if (strchr("\\/:*?\"<>|.", *p) == nullptr) name += *p;
+
+		std::wstring path = Utf8ToWide(m_CurrentFolder + "\\" + name);
+		bool exists = !name.empty() && GetFileAttributesW(path.c_str()) != INVALID_FILE_ATTRIBUTES;
+		if (exists) ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.3f, 1.0f), "同じ名前があります");
+
+		ImGui::BeginDisabled(name.empty() || exists);
+		if (ImGui::Button("作成", ImVec2(120.0f, 0.0f)) || (enter && !name.empty() && !exists))
+		{
+			CreateDirectoryW(path.c_str(), nullptr);
+			m_NeedRefresh = true;
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::EndDisabled();
+		ImGui::SameLine();
+		if (ImGui::Button("キャンセル", ImVec2(120.0f, 0.0f)) || ImGui::IsKeyPressed(ImGuiKey_Escape)) ImGui::CloseCurrentPopup();
+		ImGui::EndPopup();
+	}
+
 	ImGui::End();
 
 	if (!openFolder.empty())

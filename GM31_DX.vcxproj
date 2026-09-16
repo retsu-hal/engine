@@ -154,6 +154,8 @@
     <ClCompile Include="Component\Audio.cpp" />
     <ClCompile Include="Component\BillboardRenderer.cpp" />
     <ClCompile Include="Component\Collider.cpp" />
+    <ClCompile Include="Component\CameraComponent.cpp" />
+    <ClCompile Include="Frame\UndoSystem.cpp" />
     <ClCompile Include="Component\PrimitiveRenderer.cpp" />
     <ClCompile Include="Component\ModelRenderer.cpp" />
     <ClCompile Include="Component\Rigidbody.cpp" />
@@ -208,6 +210,8 @@
     <ClInclude Include="Component\Audio.h" />
     <ClInclude Include="Component\BillboardRenderer.h" />
     <ClInclude Include="Component\Collider.h" />
+    <ClInclude Include="Component\CameraComponent.h" />
+    <ClInclude Include="Frame\UndoSystem.h" />
     <ClInclude Include="Component\PrimitiveRenderer.h" />
     <ClInclude Include="Component\ModelRenderer.h" />
     <ClInclude Include="Component\Rigidbody.h" />

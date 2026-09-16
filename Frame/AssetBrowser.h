@@ -23,6 +23,8 @@ private:
 	static std::vector<Entry> m_Entries;
 	static bool               m_NeedRefresh;
 	static float              m_IconSize;
+	static char               m_NewFolderName[128];
+	static bool               m_OpenNewFolderPopup;
 
 	static void Refresh();
 	static void DrawIcon(const Entry& entry, const ImVec2& min, const ImVec2& max);
