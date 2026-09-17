@@ -55,6 +55,7 @@ public:
 
 	static AssetType GetType(const std::string& path);
 	static std::string GetStem(const std::string& path);	// フォルダと拡張子を除いた名前
+	static std::string GetFileName(const std::string& path);	// フォルダを除いたファイル名（拡張子つき）
 
 	// 直前の ImGui の項目をドロップ先にする。指定した種類のアセットが落とされたら true とパスを返す
 	static bool AcceptDrop(AssetType type, std::string& outPath);

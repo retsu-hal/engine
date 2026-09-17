@@ -263,13 +263,19 @@ AssetBrowser::AssetType AssetBrowser::GetType(const std::string& path)
 	return AssetType::Other;
 }
 
-std::string AssetBrowser::GetStem(const std::string& path)
+std::string AssetBrowser::GetFileName(const std::string& path)
 {
 	size_t slash = path.find_last_of("\\/");
-	std::string name = (slash == std::string::npos) ? path : path.substr(slash + 1);
+	return (slash == std::string::npos) ? path : path.substr(slash + 1);
+}
+
+std::string AssetBrowser::GetStem(const std::string& path)
+{
+	std::string name = GetFileName(path);
 	size_t dot = name.find_last_of('.');
 	return (dot == std::string::npos) ? name : name.substr(0, dot);
 }
+
 
 //=============================================================
 // フォルダの中身を読み直す（毎フレーム読むと重いので、移動したときと更新ボタンのときだけ）

@@ -13,6 +13,17 @@ enum class PlayState
 	Pause,	// 一時停止中（Step で1フレームずつ進められる）
 };
 
+// メニューや Hierarchy の右クリックから作れるオブジェクト
+enum class ObjectType
+{
+	None,
+	Empty,		// 空のオブジェクト
+	Cube,		// 四角
+	Sphere,		// 球
+	Capsule,	// カプセル
+	Camera,
+};
+
 // ツールバー / Scene / Hierarchy / Inspector ウィンドウ
 class EditorGUI
 {
@@ -64,12 +75,18 @@ private:
 	static void DrawWindowMenu();
 	static void DrawHelpMenu();
 	static void DrawShortcutsWindow();
-	static GameObject* CreateObject(int type);	// 0:空 1:四角 2:球 3:カプセル 4:カメラ
+	static GameObject* CreateObject(ObjectType type);
+	static void CreateAndSelect(ObjectType type);	// 作って、それを選択中にする
+	// 「空のオブジェクト / 四角 / 球 / カプセル / カメラ」の項目（メニューと Hierarchy の右クリックで共通）
+	// use3DSubMenu: 3D の3つを「3D オブジェクト」の中にまとめるか
+	static ObjectType DrawCreateObjectMenuItems(bool use3DSubMenu);
 	static void NewScene();
 
 	static void DrawToolbar();
 	static void DrawFileMenu();
 	static void SaveScene(const std::string& path);
+	static void SaveCurrentScene();	// 上書き保存。名前がなければ「名前を付けて保存」を開く
+	static void UndoRedo(bool redo);	// 元に戻す／やり直し（選び直しの予約も行う）
 	static void DrawTransformGizmo();
 	static void PickObject();
 	static void FocusObject(unsigned int id);

@@ -176,6 +176,21 @@
     <ClCompile Include="Frame\EditorGUI.cpp">
       <Filter>Frame</Filter>
     </ClCompile>
+    <ClCompile Include="Frame\EditorHierarchy.cpp">
+      <Filter>Frame</Filter>
+    </ClCompile>
+    <ClCompile Include="Frame\EditorInspector.cpp">
+      <Filter>Frame</Filter>
+    </ClCompile>
+    <ClCompile Include="Frame\EditorMenus.cpp">
+      <Filter>Frame</Filter>
+    </ClCompile>
+    <ClCompile Include="Frame\EditorSceneView.cpp">
+      <Filter>Frame</Filter>
+    </ClCompile>
+    <ClCompile Include="Frame\EditorUI.cpp">
+      <Filter>Frame</Filter>
+    </ClCompile>
     <ClCompile Include="Frame\GameBuilder.cpp">
       <Filter>Frame</Filter>
     </ClCompile>
@@ -348,6 +363,12 @@
       <Filter>Frame</Filter>
     </ClInclude>
     <ClInclude Include="Frame\EditorGUI.h">
+      <Filter>Frame</Filter>
+    </ClInclude>
+    <ClInclude Include="Frame\EditorGUIInternal.h">
+      <Filter>Frame</Filter>
+    </ClInclude>
+    <ClInclude Include="Frame\EditorUI.h">
       <Filter>Frame</Filter>
     </ClInclude>
     <ClInclude Include="ThirdParty\nlohmann\json.hpp" />

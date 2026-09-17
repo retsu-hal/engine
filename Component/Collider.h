@@ -13,6 +13,12 @@ struct ColliderShape
 	float RadiusXZ = 0.0f;	//上から見た円の半径（円柱のみ）
 	float HalfY = 0.0f;	//高さの半分（丸み部分を除く）
 	float Radius = 0.0f;	//全方向の丸み（球・カプセルのみ）
+
+	//すべてを囲む箱の半分の大きさ（選択やフォーカスで使う）
+	Vector3 GetHalfExtents() const
+	{
+		return Vector3(HalfX + RadiusXZ + Radius, HalfY + Radius, HalfZ + RadiusXZ + Radius);
+	}
 };
 
 //コライダーの基底

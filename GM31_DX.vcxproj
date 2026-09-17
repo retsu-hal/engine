@@ -145,6 +145,11 @@
     <ClCompile Include="Frame\SceneSerializer.cpp" />
     <ClCompile Include="Frame\EditorCamera.cpp" />
     <ClCompile Include="Frame\EditorGUI.cpp" />
+    <ClCompile Include="Frame\EditorHierarchy.cpp" />
+    <ClCompile Include="Frame\EditorInspector.cpp" />
+    <ClCompile Include="Frame\EditorMenus.cpp" />
+    <ClCompile Include="Frame\EditorSceneView.cpp" />
+    <ClCompile Include="Frame\EditorUI.cpp" />
     <ClCompile Include="Frame\Gizmo.cpp" />
     <ClCompile Include="Frame\Input.cpp" />
     <ClCompile Include="Frame\Manager.cpp" />
@@ -202,6 +207,8 @@
     <ClInclude Include="ThirdParty\nlohmann\json_fwd.hpp" />
     <ClInclude Include="Frame\EditorCamera.h" />
     <ClInclude Include="Frame\EditorGUI.h" />
+    <ClInclude Include="Frame\EditorGUIInternal.h" />
+    <ClInclude Include="Frame\EditorUI.h" />
     <ClInclude Include="Frame\Component.h" />
     <ClInclude Include="Frame\GameObject.h" />
     <ClInclude Include="Frame\Gizmo.h" />
