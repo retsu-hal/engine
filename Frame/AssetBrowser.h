@@ -49,7 +49,9 @@ public:
 	{
 		StartAction(Action::NewScript, "Script");
 		strncpy_s(m_NameBuffer, name, _TRUNCATE);	// 入力欄に名前を入れておく
-	}	static const std::string& GetCurrentFolder() { return m_CurrentFolder; }
+	}
+
+	static const std::string& GetCurrentFolder() { return m_CurrentFolder; }
 
 	static AssetType GetType(const std::string& path);
 	static std::string GetStem(const std::string& path);	// フォルダと拡張子を除いた名前
