@@ -86,6 +86,7 @@ public:
 	enum { VIEW_SCENE = 0, VIEW_GAME = 1 };
 	static void BeginScene(int view = VIEW_SCENE);	// Scene / Game 用のテクスチャに描き始める
 	static void BeginBackBuffer();					// 画面（バックバッファ）に切り替える。ImGui はこちらに描く
+	static void BeginGameOnBackBuffer();			// ゲーム用 exe：画面に直接ゲームを描く
 	static void Resize(UINT width, UINT height);	// ウィンドウの大きさが変わったとき（WM_SIZE）に呼ぶ
 	static ID3D11ShaderResourceView* GetViewTexture(int view) { return m_ViewSRV[view]; }
 	static ID3D11ShaderResourceView* GetSceneTexture() { return m_ViewSRV[VIEW_SCENE]; }

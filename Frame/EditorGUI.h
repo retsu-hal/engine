@@ -53,6 +53,8 @@ private:
 	// 各ウィンドウを表示するか（Window メニュー）
 	static bool        m_ShowScene, m_ShowGame, m_ShowHierarchy, m_ShowInspector, m_ShowProject, m_ShowConsole;
 	static bool        m_ShowShortcuts;
+	static bool        m_ShowBuildSettings;
+	static void DrawBuildSettings();
 
 	static void BuildDefaultLayout();
 	static void DrawGameView();

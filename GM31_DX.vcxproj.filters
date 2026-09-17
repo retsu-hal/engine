@@ -176,6 +176,12 @@
     <ClCompile Include="Frame\EditorGUI.cpp">
       <Filter>Frame</Filter>
     </ClCompile>
+    <ClCompile Include="Frame\GameBuilder.cpp">
+      <Filter>Frame</Filter>
+    </ClCompile>
+    <ClCompile Include="Frame\ProjectSettings.cpp">
+      <Filter>Frame</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Script\Prefabs.h">
@@ -342,6 +348,14 @@
       <Filter>Frame</Filter>
     </ClInclude>
     <ClInclude Include="Frame\EditorGUI.h">
+      <Filter>Frame</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\nlohmann\json.hpp" />
+    <ClInclude Include="ThirdParty\nlohmann\json_fwd.hpp" />
+    <ClInclude Include="Frame\GameBuilder.h">
+      <Filter>Frame</Filter>
+    </ClInclude>
+    <ClInclude Include="Frame\ProjectSettings.h">
       <Filter>Frame</Filter>
     </ClInclude>
   </ItemGroup>

@@ -41,6 +41,9 @@ static bool SerializeObject(GameObject* object, json& data)
 	data["name"] = object->GetName();
 	data["parent"] = object->GetParent() ? object->GetParent()->GetID() : 0;
 	data["layer"] = object->GetLayer();
+	data["active"] = object->IsActiveSelf();
+	data["tag"] = object->GetTag();
+	data["static"] = object->IsStatic();
 	data["position"] = ToJson(object->GetPosition());
 	data["rotation"] = ToJson(object->GetRotation());
 	data["scale"] = ToJson(object->GetScale());
@@ -105,6 +108,16 @@ static void CreateObjects(const json& objects, std::vector<GameObject*>& created
 		object->SetRotation(rotation);
 		object->SetScale(scale);
 		object->SetLayer(layer);
+
+		bool active = object->IsActiveSelf();
+		std::string tag = object->GetTag();
+		bool isStatic = object->IsStatic();
+		JsonRead(data, "active", active);
+		JsonRead(data, "tag", tag);
+		JsonRead(data, "static", isStatic);
+		object->SetActive(active);
+		object->SetTag(tag);
+		object->SetStatic(isStatic);
 
 		if (data.contains("components"))
 		{

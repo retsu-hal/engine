@@ -11,6 +11,8 @@
 #include "CameraComponent.h"
 #include "SceneGrid.h"
 #include "Console.h"
+#include "ProjectSettings.h"
+#include "SceneSerializer.h"
 #include "ShaderManager.h"
 #include "TextureManager.h"
 #include "Collider.h"
@@ -20,6 +22,15 @@
 #include "ImGuizmo.h"
 #include "SceneSerializer.h"
 
+
+// UTF-8 → ワイド文字（ウィンドウのタイトル用）
+static std::wstring Utf8ToWideTitle(const std::string& text)
+{
+	int size = MultiByteToWideChar(CP_UTF8, 0, text.c_str(), -1, nullptr, 0);
+	std::wstring result(size > 0 ? size - 1 : 0, L'\0');
+	if (size > 1) MultiByteToWideChar(CP_UTF8, 0, text.c_str(), -1, &result[0], size);
+	return result;
+}
 
 //staticメンバー変数はcppで定義する必要がある
 std::list<GameObject* > Manager::m_GameObjects;
@@ -37,7 +48,9 @@ void Manager::Init()
 	Input::Init();
 	Renderer::Init();
 	Audio::InitMaster();
+	ProjectSettings::Load();
 
+#ifdef ENGINE_EDITOR
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
@@ -47,6 +60,10 @@ void Manager::Init()
 	{
 		ImGuiIO& io = ImGui::GetIO();
 		const char* fontPath = "asset\\font\\NotoSansJP-VariableFont_wght.ttf";
+		if (GetFileAttributesA(fontPath) == INVALID_FILE_ATTRIBUTES)
+		{
+			fontPath = "asset\\font\\NotoSansJP-Regular.ttf";
+		}
 		if (GetFileAttributesA(fontPath) == INVALID_FILE_ATTRIBUTES)
 		{
 			fontPath = "C:\\Windows\\Fonts\\meiryo.ttc";
@@ -61,14 +78,24 @@ void Manager::Init()
 	ImGui_ImplDX11_Init(Renderer::GetDevice(), Renderer::GetDeviceContext());
 
 	ChangeScene<TitleScene>();
+#else
+	// ゲーム用 exe：タイトルを設定し、最初のシーンを読み込む
+	SetWindowTextW(GetWindow(), Utf8ToWideTitle(ProjectSettings::Title).c_str());
+	if (GetFileAttributesA(ProjectSettings::StartScene.c_str()) != INVALID_FILE_ATTRIBUTES)
+		LoadSceneFile(ProjectSettings::StartScene);
+	else
+		ChangeScene<TitleScene>();
+#endif
 }
 
 
 void Manager::Uninit()
 {
+#ifdef ENGINE_EDITOR
 	ImGui_ImplDX11_Shutdown();
 	ImGui_ImplWin32_Shutdown();
 	ImGui::DestroyContext();
+#endif
 	
 	
 	for (GameObject* obj : m_GameObjects) obj->Uninit();
@@ -95,6 +122,7 @@ void Manager::Uninit()
 
 void Manager::Update()
 {
+#ifdef ENGINE_EDITOR
 	ImGui_ImplDX11_NewFrame();
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
@@ -102,20 +130,28 @@ void Manager::Update()
 
 	// 画面全体をドッキング領域にする（初回は EditorGUI が Unity 風の配置を作る）
 	EditorGUI::SetDockSpaceID(ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport()));
+#endif
 
 	float  dt =GetDeltaTime();
 	Input::Update();
 
 
+#ifdef ENGINE_EDITOR
 	if (Input::GetKeyTrigger(VK_F1)) Gizmo::SetEnable(!Gizmo::IsEnable());
+#endif
 
 
-	// Play 中（または Step 要求があるとき）だけゲームを進める
+	// Play 中（または Step 要求があるとき）だけゲームを進める。ゲーム用 exe では常に進める
+#ifdef ENGINE_EDITOR
 	if (EditorGUI::ConsumeGameUpdate())
+#endif
 	{
 		if (m_Scene != nullptr)	m_Scene->Update();
 
-		for (GameObject* gameObject : m_GameObjects) gameObject->Update();
+		for (GameObject* gameObject : m_GameObjects)
+		{
+			if (gameObject->IsActiveInHierarchy()) gameObject->Update();	// 非アクティブは止める
+		}
 
 		//当たり判定（各オブジェクトのUpdateで移動し終わってから、まとめて押し出す）
 		Collider::Check();
@@ -158,9 +194,12 @@ void Manager::Update()
 			m_NextScene = nullptr;
 
 			// 止まっている状態で読み込んだときも、1フレームだけ更新してカメラやアニメーションを初期状態にする
+#ifdef ENGINE_EDITOR
 			if (EditorGUI::GetPlayState() != PlayState::Play) EditorGUI::RequestStep(1);
+#endif
 		}
 	}
+#ifdef ENGINE_EDITOR
 	// エディタカメラ（初回はゲームカメラの位置から始める）
 	if (!EditorCamera::IsInitialized())
 	{
@@ -170,10 +209,12 @@ void Manager::Update()
 	EditorCamera::Update(EditorGUI::IsSceneViewHovered());	// Scene ビューはいつでもエディタカメラ
 
 	EditorGUI::Draw();
+#endif
 };
 
 void Manager::Draw()
 {
+#ifdef ENGINE_EDITOR
 	// Scene ビュー（エディタカメラ）と Game ビュー（ゲームのカメラ）を別々のテクスチャに描く
 	// 表示されていないタブは描かない（重くならないように）
 	if (EditorGUI::IsSceneViewVisible()) DrawWorld(true);
@@ -186,14 +227,19 @@ void Manager::Draw()
 
 	ImGui::Render();
 	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+#else
+	// ゲーム用 exe：画面に直接ゲームを描く
+	DrawWorld(false, true);
+#endif
 
 	Renderer::End();
 }
 
-void Manager::DrawWorld(bool sceneView)
+void Manager::DrawWorld(bool sceneView, bool toBackBuffer)
 {
 	m_DrawingSceneView = sceneView;
-	Renderer::BeginScene(sceneView ? Renderer::VIEW_SCENE : Renderer::VIEW_GAME);
+	if (toBackBuffer) Renderer::BeginGameOnBackBuffer();
+	else Renderer::BeginScene(sceneView ? Renderer::VIEW_SCENE : Renderer::VIEW_GAME);
 
 	bool useEditorCamera = sceneView && EditorCamera::IsInitialized();
 	CameraComponent* mainCamera = sceneView ? nullptr : CameraComponent::GetMain();
@@ -253,7 +299,7 @@ void Manager::DrawWorld(bool sceneView)
 
 		for (GameObject* gameObject : m_GameObjects)
 		{
-			if (gameObject != nullptr && gameObject->GetLayer() == layer)
+			if (gameObject != nullptr && gameObject->GetLayer() == layer && gameObject->IsActiveInHierarchy())
 			{
 				gameObject->Draw();
 
@@ -355,4 +401,26 @@ GameObject* Manager::AddGameObjectInstance(GameObject* gameObject, const std::st
 	gameObject->Init();
 	m_GameObjects.push_back(gameObject);
 	return gameObject;
+}
+
+//=============================================================
+// タグで探す（破棄予定・非アクティブのものは除く）
+//=============================================================
+GameObject* Manager::FindWithTag(const std::string& tag)
+{
+	for (GameObject* object : m_GameObjects)
+	{
+		if (!object->IsDestroyed() && object->IsActiveInHierarchy() && object->CompareTag(tag)) return object;
+	}
+	return nullptr;
+}
+
+std::vector<GameObject*> Manager::FindGameObjectsWithTag(const std::string& tag)
+{
+	std::vector<GameObject*> result;
+	for (GameObject* object : m_GameObjects)
+	{
+		if (!object->IsDestroyed() && object->IsActiveInHierarchy() && object->CompareTag(tag)) result.push_back(object);
+	}
+	return result;
 }

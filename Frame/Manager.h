@@ -25,7 +25,7 @@ private:
 	static float m_ChangeSceneTime;
 	static bool  m_DrawingSceneView;
 
-	static void DrawWorld(bool sceneView);
+	static void DrawWorld(bool sceneView, bool toBackBuffer = false);
 
 public:
 	static void Init();
@@ -77,13 +77,17 @@ public:
 	// 名前から作ったオブジェクトを登録する（シーン読み込み用）
 	static GameObject* AddGameObjectInstance(GameObject* gameObject, const std::string& name);
 
+	// タグが一致する最初のアクティブなオブジェクト（Unity の GameObject.FindWithTag）
+	static GameObject* FindWithTag(const std::string& tag);
+	static std::vector<GameObject*> FindGameObjectsWithTag(const std::string& tag);
+
 	// T 型のコンポーネントを持つ最初のものを探す（例: FindComponent<PlayerController>()）
 	template<typename T>
 	static T* FindComponent()
 	{
 		for (GameObject* gameObject : m_GameObjects)
 		{
-			if (gameObject->IsDestroyed()) continue;
+			if (gameObject->IsDestroyed() || !gameObject->IsActiveInHierarchy()) continue;
 			T* component = gameObject->GetComponent<T>();
 			if (component != nullptr) return component;
 		}
@@ -97,7 +101,7 @@ public:
 		std::vector<T*> components;
 		for (GameObject* gameObject : m_GameObjects)
 		{
-			if (gameObject->IsDestroyed()) continue;
+			if (gameObject->IsDestroyed() || !gameObject->IsActiveInHierarchy()) continue;
 			T* component = gameObject->GetComponent<T>();
 			if (component != nullptr) components.push_back(component);
 		}

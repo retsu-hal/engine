@@ -18,12 +18,16 @@
 #include "SceneGrid.h"
 #include "Gizmo.h"
 #include "ScriptTool.h"
+#include "GameBuilder.h"
+#include "ProjectSettings.h"
 #include "MeshField.h"
 #include "imgui_internal.h"	// BeginDragDropTargetCustom
+#include "JsonUtil.h"
 #include <typeinfo>
 #include <cstring>
 #include <cfloat>
 #include <algorithm>
+#include <cctype>
 
 unsigned int EditorGUI::m_SelectedID = 0;
 GameObject* EditorGUI::m_DragChild = nullptr;
@@ -62,6 +66,7 @@ bool         EditorGUI::m_ShowInspector = true;
 bool         EditorGUI::m_ShowProject = true;
 bool         EditorGUI::m_ShowConsole = true;
 bool         EditorGUI::m_ShowShortcuts = false;
+bool         EditorGUI::m_ShowBuildSettings = false;
 
 //=============================================================
 // 今シーンビューに映しているカメラの行列（止めている間はエディタカメラ、Play 中はゲームカメラ）
@@ -155,6 +160,8 @@ void EditorGUI::Draw()
 	if (m_ShowProject)   AssetBrowser::Draw(&m_ShowProject);
 	if (m_ShowConsole)   Console::Draw(&m_ShowConsole);
 	DrawShortcutsWindow();
+	DrawBuildSettings();
+	GameBuilder::Update();
 
 	HandleShortcuts();
 
@@ -303,6 +310,13 @@ void EditorGUI::HandleShortcuts()
 			else m_RestoreSelectName.clear();
 		}
 
+		// Ctrl+B：ビルドして実行、Ctrl+Shift+B：ビルド設定
+		if (ImGui::IsKeyPressed(ImGuiKey_B, false))
+		{
+			if (io.KeyShift) m_ShowBuildSettings = true;
+			else if (GameBuilder::GetState() != GameBuilder::State::Building) GameBuilder::Start(true);
+		}
+
 		// Ctrl+P：再生／停止、Ctrl+Shift+P：一時停止
 		if (ImGui::IsKeyPressed(ImGuiKey_P, false))
 		{
@@ -345,6 +359,13 @@ void EditorGUI::HandleShortcuts()
 
 	// F2：名前の変更
 	if (allowKeys && ImGui::IsKeyPressed(ImGuiKey_F2, false)) BeginRename(m_SelectedID);
+
+	// Alt+Shift+A：アクティブ切り替え（Unity と同じ）
+	if (allowKeys && io.KeyAlt && io.KeyShift && ImGui::IsKeyPressed(ImGuiKey_A, false))
+	{
+		UndoSystem::Begin();
+		selected->SetActive(!selected->IsActiveSelf());
+	}
 }
 
 void EditorGUI::OpenScene(const std::string& path)
@@ -577,6 +598,8 @@ void EditorGUI::DrawShortcutsWindow()
 			{ "W / E / R", "移動 / 回転 / 拡縮" },
 			{ "Ctrl+P", "再生・停止" },
 			{ "Ctrl+Shift+P", "一時停止" },
+			{ "Ctrl+B", "ビルドして実行" },
+			{ "Ctrl+Shift+B", "ビルド設定" },
 			{ "F1", "ギズモ表示" },
 			{ "右ドラッグ + WASD/QE", "Scene のカメラ移動" },
 			{ "Ctrl+ホイール", "Project のアイコンの大きさ" },
@@ -594,6 +617,88 @@ void EditorGUI::DrawShortcutsWindow()
 			ImGui::EndTable();
 		}
 	}
+	ImGui::End();
+}
+
+//=============================================================
+// ビルド設定（ゲーム用 exe の作成）
+//=============================================================
+void EditorGUI::DrawBuildSettings()
+{
+	// ビルド中は、閉じていても右下に小さく状況を出す
+	if (GameBuilder::GetState() == GameBuilder::State::Building && !m_ShowBuildSettings)
+	{
+		ImGuiViewport* viewport = ImGui::GetMainViewport();
+		ImGui::SetNextWindowPos(ImVec2(viewport->WorkPos.x + viewport->WorkSize.x - 16.0f, viewport->WorkPos.y + viewport->WorkSize.y - 16.0f), ImGuiCond_Always, ImVec2(1.0f, 1.0f));
+		ImGui::SetNextWindowBgAlpha(0.85f);
+		if (ImGui::Begin("##BuildProgress", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav))
+		{
+			ImGui::Text("ビルド中... %.0f 秒", GameBuilder::GetElapsedSeconds());
+		}
+		ImGui::End();
+	}
+
+	if (!m_ShowBuildSettings) return;
+
+	ImGui::SetNextWindowSize(ImVec2(460.0f, 0.0f), ImGuiCond_FirstUseEver);
+	if (!ImGui::Begin("ビルド設定", &m_ShowBuildSettings, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		ImGui::End();
+		return;
+	}
+
+	// タイトル
+	char title[128];
+	strncpy_s(title, ProjectSettings::Title.c_str(), _TRUNCATE);
+	if (ImGui::InputText("ゲームの名前", title, sizeof(title))) ProjectSettings::Title = title;
+
+	// 最初のシーン（asset\scene の中から選ぶ）
+	if (ImGui::BeginCombo("最初のシーン", ProjectSettings::StartScene.c_str()))
+	{
+		WIN32_FIND_DATAA find;
+		HANDLE handle = FindFirstFileA("asset\\scene\\*.json", &find);
+		if (handle != INVALID_HANDLE_VALUE)
+		{
+			do
+			{
+				std::string path = std::string("asset\\scene\\") + find.cFileName;
+				if (ImGui::Selectable(path.c_str(), path == ProjectSettings::StartScene)) ProjectSettings::StartScene = path;
+			} while (FindNextFileA(handle, &find));
+			FindClose(handle);
+		}
+		ImGui::EndCombo();
+	}
+	if (!m_ScenePath.empty() && ImGui::SmallButton("今開いているシーンにする")) ProjectSettings::StartScene = m_ScenePath;
+
+	ImGui::TextDisabled("出力先: %s\\（exe・asset・shader・DLL をまとめます）", GameBuilder::GetOutputFolder().c_str());
+	ImGui::Separator();
+
+	bool building = (GameBuilder::GetState() == GameBuilder::State::Building);
+	ImGui::BeginDisabled(building);
+	if (ImGui::Button("設定を保存", ImVec2(110.0f, 0.0f))) ProjectSettings::Save();
+	ImGui::SameLine();
+	if (ImGui::Button("ビルド", ImVec2(110.0f, 0.0f))) GameBuilder::Start(false);
+	ImGui::SameLine();
+	if (ImGui::Button("ビルドして実行", ImVec2(130.0f, 0.0f))) GameBuilder::Start(true);
+	ImGui::EndDisabled();
+
+	switch (GameBuilder::GetState())
+	{
+	case GameBuilder::State::Building:
+		ImGui::Text("ビルド中... %.0f 秒（Console に経過が出ます）", GameBuilder::GetElapsedSeconds());
+		break;
+	case GameBuilder::State::Succeeded:
+		ImGui::TextColored(ImVec4(0.4f, 0.9f, 0.5f, 1.0f), "完了しました");
+		ImGui::SameLine();
+		if (ImGui::SmallButton("フォルダを開く")) GameBuilder::OpenOutputFolder();
+		break;
+	case GameBuilder::State::Failed:
+		ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "失敗しました（Console を確認してください）");
+		break;
+	default:
+		break;
+	}
+
 	ImGui::End();
 }
 
@@ -672,6 +777,10 @@ void EditorGUI::DrawFileMenu()
 			if (!any) ImGui::TextDisabled("asset\\scene に .json がありません");
 			ImGui::EndMenu();
 		}
+
+		ImGui::Separator();
+		ImGui::MenuItem("ビルド設定...", "Ctrl+Shift+B", &m_ShowBuildSettings);
+		if (ImGui::MenuItem("ビルドして実行", "Ctrl+B", false, GameBuilder::GetState() != GameBuilder::State::Building)) GameBuilder::Start(true);
 
 		ImGui::Separator();
 		if (ImGui::MenuItem("終了")) PostMessage(GetWindow(), WM_CLOSE, 0, 0);
@@ -1213,7 +1322,7 @@ void EditorGUI::PickObject()
 	// 1. コライダーとの当たり（形はすべて外側の箱で近似する）
 	for (GameObject* object : Manager::GetAllGameObjects())
 	{
-		if (object->IsDestroyed()) continue;
+		if (object->IsDestroyed() || !object->IsActiveInHierarchy()) continue;
 
 		for (Component* component : object->GetComponents())
 		{
@@ -1265,7 +1374,7 @@ void EditorGUI::PickObject()
 		float bestPixels = 25.0f;
 		for (GameObject* object : Manager::GetAllGameObjects())
 		{
-			if (object->IsDestroyed() || object->GetLayer() == 3) continue;
+			if (object->IsDestroyed() || !object->IsActiveInHierarchy() || object->GetLayer() == 3) continue;
 
 			Vector3 p = object->GetWorldPosition();
 			XMVECTOR clip = XMVector4Transform(XMVectorSet(p.x, p.y, p.z, 1.0f), viewProjection);
@@ -1359,7 +1468,10 @@ void EditorGUI::DrawNode(GameObject* object)
 	ImGui::PushID((int)object->GetID());
 
 	bool renaming = (m_RenamingID == object->GetID());
+	bool inactive = !object->IsActiveInHierarchy();	// 非アクティブは灰色で表示
+	if (inactive) ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
 	bool open = ImGui::TreeNodeEx("##node", flags, "%s", renaming ? "" : object->GetName().c_str());
+	if (inactive) ImGui::PopStyleColor();
 
 	// 名前の変更中は、名前の位置に入力欄を出す
 	if (renaming)
@@ -1399,6 +1511,7 @@ void EditorGUI::DrawNode(GameObject* object)
 		// 木をたどっている最中に親子関係を変えると壊れるので、複製は描き終わってから行う
 		if (ImGui::MenuItem("名前の変更", "F2")) BeginRename(object->GetID());
 		if (ImGui::MenuItem("複製", "Ctrl+D")) m_DuplicateRequested = true;
+		if (ImGui::MenuItem("アクティブ切り替え", "Alt+Shift+A")) object->SetActive(!object->IsActiveSelf());
 		if (ImGui::MenuItem("削除", "Delete"))
 		{
 			object->SetDestroy();
@@ -1441,6 +1554,140 @@ void EditorGUI::DrawNode(GameObject* object)
 }
 
 //=============================================================
+// Inspector 用の小さな部品
+//=============================================================
+
+// "BoxCollider" → "Box Collider"（Unity の ObjectNames.NicifyVariableName と同じ考え方）
+static std::string NicifyName(const std::string& name)
+{
+	std::string result;
+	for (size_t i = 0; i < name.size(); i++)
+	{
+		char c = name[i];
+		if (i > 0 && isupper((unsigned char)c))
+		{
+			char prev = name[i - 1];
+			bool nextLower = (i + 1 < name.size()) && islower((unsigned char)name[i + 1]);
+			// 小文字→大文字、または "UIText" の "T" のように略語の終わり
+			if (islower((unsigned char)prev) || isdigit((unsigned char)prev) || (isupper((unsigned char)prev) && nextLower))
+				result += ' ';
+		}
+		if (c == '_') { result += ' '; continue; }
+		result += c;
+	}
+	return result;
+}
+
+// 種類ごとのアイコン（1文字）と色
+static void GetComponentIcon(const std::string& typeName, const char*& icon, ImVec4& color)
+{
+	auto has = [&](const char* word) { return typeName.find(word) != std::string::npos; };
+	if (has("Collider"))       { icon = "C"; color = ImVec4(0.35f, 0.85f, 0.40f, 1.0f); }
+	else if (has("Rigidbody")) { icon = "R"; color = ImVec4(0.30f, 0.75f, 0.95f, 1.0f); }
+	else if (has("Camera"))    { icon = "Ca"; color = ImVec4(0.70f, 0.55f, 0.95f, 1.0f); }
+	else if (has("Audio"))     { icon = "A"; color = ImVec4(0.95f, 0.65f, 0.25f, 1.0f); }
+	else if (has("Animation")) { icon = "An"; color = ImVec4(0.95f, 0.45f, 0.60f, 1.0f); }
+	else if (has("Renderer") || has("Model")) { icon = "M"; color = ImVec4(0.40f, 0.60f, 1.00f, 1.0f); }
+	else if (has("Light"))     { icon = "L"; color = ImVec4(1.00f, 0.90f, 0.35f, 1.0f); }
+}
+
+// CollapsingHeader の直後に呼ぶ：見出しの上にアイコン・有効チェック・名前を重ねて描き、右端に「…」ボタンを置く位置へ移動する
+static void ComponentHeaderLabel(const char* label, const char* icon, const ImVec4& iconColor, bool* enabled)
+{
+	ImVec2 min = ImGui::GetItemRectMin();
+	ImVec2 max = ImGui::GetItemRectMax();
+	float height = max.y - min.y;
+	ImDrawList* draw = ImGui::GetWindowDrawList();
+
+	// アイコン（色付きの角丸四角＋文字）
+	float x = min.x + ImGui::GetTreeNodeToLabelSpacing();
+	float size = height - 6.0f;
+	ImVec2 iconMin(x, min.y + 3.0f);
+	ImVec2 iconMax(x + size, min.y + 3.0f + size);
+	draw->AddRectFilled(iconMin, iconMax, ImGui::GetColorU32(iconColor), 3.0f);
+	ImVec2 textSize = ImGui::CalcTextSize(icon);
+	draw->AddText(ImVec2(iconMin.x + (size - textSize.x) * 0.5f, iconMin.y + (size - textSize.y) * 0.5f), IM_COL32(20, 20, 20, 255), icon);
+	x += size + 6.0f;
+
+	// 有効チェック（見出しの上に重ねて置く）
+	if (enabled)
+	{
+		ImGui::SameLine(x - ImGui::GetWindowPos().x + ImGui::GetScrollX());
+		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2.0f, 2.0f));
+		ImGui::Checkbox("##Enabled", enabled);
+		ImGui::PopStyleVar();
+		x = ImGui::GetItemRectMax().x + 6.0f;
+	}
+
+	// 名前（無効なら薄く）
+	ImU32 textColor = ImGui::GetColorU32((enabled && !*enabled) ? ImGuiCol_TextDisabled : ImGuiCol_Text);
+	draw->AddText(ImVec2(x, min.y + (height - ImGui::GetFontSize()) * 0.5f), textColor, label);
+
+	// 右端の「…」ボタンの位置
+	float buttonWidth = ImGui::CalcTextSize("...").x + ImGui::GetStyle().FramePadding.x * 2.0f;
+	ImGui::SameLine(max.x - ImGui::GetWindowPos().x + ImGui::GetScrollX() - buttonWidth - 4.0f);
+}
+
+// Unity 風の Vector3 の行：「Position   [X ___] [Y ___] [Z ___]」
+// X/Y/Z の色付きラベルを左右にドラッグしても値が変わる。右クリックで 0（Scale は 1）に戻す
+static bool Vector3Field(const char* label, Vector3& value, float speed, float labelWidth)
+{
+	bool changed = false;
+	ImGui::PushID(label);
+
+	ImGui::AlignTextToFramePadding();
+	ImGui::TextUnformatted(label);
+	ImGui::SameLine(labelWidth);
+
+	float spacing = ImGui::GetStyle().ItemSpacing.x;
+	float letterWidth = ImGui::GetFrameHeight();
+	float fieldWidth = (ImGui::GetContentRegionAvail().x - spacing * 2.0f) / 3.0f - letterWidth;
+	if (fieldWidth < 20.0f) fieldWidth = 20.0f;
+
+	const char* letters[] = { "X", "Y", "Z" };
+	const ImVec4 colors[] = {
+		ImVec4(0.80f, 0.25f, 0.25f, 1.0f),
+		ImVec4(0.30f, 0.65f, 0.25f, 1.0f),
+		ImVec4(0.25f, 0.45f, 0.85f, 1.0f) };
+	float* values[] = { &value.x, &value.y, &value.z };
+	float resetValue = (strcmp(label, "Scale") == 0) ? 1.0f : 0.0f;
+
+	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, ImGui::GetStyle().ItemSpacing.y));
+	for (int i = 0; i < 3; i++)
+	{
+		ImGui::PushID(i);
+		if (i > 0) ImGui::SameLine(0.0f, spacing);
+
+		ImGui::PushStyleColor(ImGuiCol_Button, colors[i]);
+		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(colors[i].x * 1.2f, colors[i].y * 1.2f, colors[i].z * 1.2f, 1.0f));
+		ImGui::PushStyleColor(ImGuiCol_ButtonActive, colors[i]);
+		ImGui::Button(letters[i], ImVec2(letterWidth, 0.0f));
+		ImGui::PopStyleColor(3);
+
+		if (ImGui::IsItemHovered()) ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+		if (ImGui::IsItemActive() && ImGui::GetIO().MouseDelta.x != 0.0f)
+		{
+			*values[i] += ImGui::GetIO().MouseDelta.x * speed;
+			changed = true;
+		}
+		if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+		{
+			*values[i] = resetValue;
+			changed = true;
+		}
+
+		ImGui::SameLine();
+		ImGui::SetNextItemWidth(fieldWidth);
+		if (ImGui::DragFloat("##v", values[i], speed, 0.0f, 0.0f, "%.3f")) changed = true;
+		ImGui::PopID();
+	}
+	ImGui::PopStyleVar();
+
+	ImGui::PopID();
+	return changed;
+}
+
+//=============================================================
 // Inspector
 //=============================================================
 void EditorGUI::DrawInspector()
@@ -1459,53 +1706,150 @@ void EditorGUI::DrawInspector()
 		return;
 	}
 
-	// 名前
+	const float labelWidth = 90.0f;	// Transform の左の見出しの幅
+
+	//---------------------------------------------------------
+	// ヘッダー：[アクティブ] [名前] [Static]
+	//---------------------------------------------------------
+	bool active = object->IsActiveSelf();
+	if (ImGui::Checkbox("##Active", &active)) object->SetActive(active);
+	if (ImGui::IsItemHovered()) ImGui::SetTooltip("アクティブ（外すと Update / Draw / 当たり判定が止まる。子も止まる）");
+
+	ImGui::SameLine();
 	char name[128];
 	strncpy_s(name, object->GetName().c_str(), _TRUNCATE);
-	if (ImGui::InputText("Name", name, sizeof(name)))
+	float staticWidth = ImGui::CalcTextSize("Static").x + ImGui::GetFrameHeight() + ImGui::GetStyle().ItemInnerSpacing.x;
+	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - staticWidth - ImGui::GetStyle().ItemSpacing.x);
+	if (ImGui::InputText("##Name", name, sizeof(name))) object->SetName(name);
+
+	ImGui::SameLine();
+	bool isStatic = object->IsStatic();
+	if (ImGui::Checkbox("Static", &isStatic)) object->SetStatic(isStatic);
+
+	//---------------------------------------------------------
+	// Tag / Layer
+	//---------------------------------------------------------
+	float half = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) * 0.5f;
+	float comboLabel = ImGui::CalcTextSize("Layer").x + ImGui::GetStyle().ItemInnerSpacing.x;
+
+	ImGui::AlignTextToFramePadding();
+	ImGui::TextUnformatted("Tag");
+	ImGui::SameLine(comboLabel + ImGui::GetStyle().WindowPadding.x);
+	ImGui::SetNextItemWidth(half - comboLabel);
+	bool openAddTag = false;
+	if (ImGui::BeginCombo("##Tag", object->GetTag().c_str()))
 	{
-		object->SetName(name);
+		for (const std::string& tag : ProjectSettings::Tags)
+		{
+			if (ImGui::Selectable(tag.c_str(), tag == object->GetTag())) object->SetTag(tag);
+		}
+		ImGui::Separator();
+		if (ImGui::Selectable("Add Tag...")) openAddTag = true;
+		ImGui::EndCombo();
+	}
+	if (openAddTag) ImGui::OpenPopup("AddTagPopup");
+	if (ImGui::BeginPopup("AddTagPopup"))
+	{
+		static char newTag[64] = "";
+		if (ImGui::IsWindowAppearing())
+		{
+			newTag[0] = '\0';
+			ImGui::SetKeyboardFocusHere();
+		}
+		ImGui::SetNextItemWidth(180.0f);
+		bool enter = ImGui::InputTextWithHint("##NewTag", "新しいタグ名", newTag, sizeof(newTag), ImGuiInputTextFlags_EnterReturnsTrue);
+		ImGui::SameLine();
+		if ((ImGui::Button("追加") || enter) && newTag[0] != '\0')
+		{
+			ProjectSettings::AddTag(newTag);
+			ProjectSettings::Save();
+			object->SetTag(newTag);
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::EndPopup();
 	}
 
-	ImGui::TextDisabled("ID: %u   Class: %s", object->GetID(), TypeName(typeid(*object).name()).c_str());
+	ImGui::SameLine();
+	ImGui::TextUnformatted("Layer");
+	ImGui::SameLine();
+	ImGui::SetNextItemWidth(-1.0f);
+	static const char* LAYER_NAMES[] = { "0: Camera", "1: Default", "2: Transparent", "3: UI (2D)" };
+	int layer = object->GetLayer();
+	if (layer < 0 || layer > 3) layer = 1;
+	if (ImGui::Combo("##Layer", &layer, LAYER_NAMES, IM_ARRAYSIZE(LAYER_NAMES))) object->SetLayer(layer);
 
+	// 親子・ID は小さく
 	GameObject* parent = object->GetParent();
-	ImGui::Text("Parent: %s", parent ? parent->GetName().c_str() : "(なし)");
-	if (parent && ImGui::SmallButton("親子関係を解除"))
+	ImGui::TextDisabled("ID: %u   Class: %s   Parent: %s", object->GetID(),
+		TypeName(typeid(*object).name()).c_str(), parent ? parent->GetName().c_str() : "-");
+	if (parent)
 	{
-		object->SetParent(nullptr);
+		ImGui::SameLine();
+		if (ImGui::SmallButton("親子関係を解除")) object->SetParent(nullptr);
+	}
+	if (!object->IsActiveInHierarchy() && object->IsActiveSelf())
+	{
+		ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.3f, 1.0f), "親が非アクティブなので止まっています");
 	}
 
+	ImGui::Spacing();
+
+	//---------------------------------------------------------
 	// Transform
-	if (ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen))
+	//---------------------------------------------------------
+	bool transformOpen = ImGui::CollapsingHeader("##TransformHeader", ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_AllowOverlap);
+	if (ImGui::BeginPopupContextItem("TransformMenu"))
+	{
+		if (ImGui::MenuItem("Reset"))
+		{
+			object->SetPosition({ 0.0f, 0.0f, 0.0f });
+			object->SetRotation({ 0.0f, 0.0f, 0.0f });
+			object->SetScale({ 1.0f, 1.0f, 1.0f });
+		}
+		ImGui::Separator();
+		if (ImGui::MenuItem("Reset Position")) object->SetPosition({ 0.0f, 0.0f, 0.0f });
+		if (ImGui::MenuItem("Reset Rotation")) object->SetRotation({ 0.0f, 0.0f, 0.0f });
+		if (ImGui::MenuItem("Reset Scale"))    object->SetScale({ 1.0f, 1.0f, 1.0f });
+		ImGui::EndPopup();
+	}
+	ComponentHeaderLabel("Transform", "T", ImVec4(0.55f, 0.55f, 0.6f, 1.0f), nullptr);
+	if (ImGui::SmallButton("...##Transform")) ImGui::OpenPopup("TransformMenu");
+
+	if (transformOpen)
 	{
 		Vector3 pos = object->GetPosition();
-		if (ImGui::DragFloat3("Position", &pos.x, 0.05f)) object->SetPosition(pos);
+		if (Vector3Field("Position", pos, 0.05f, labelWidth)) object->SetPosition(pos);
 
 		// 内部はラジアン、表示は度
 		Vector3 rot = object->GetRotation();
-		float deg[3] = { XMConvertToDegrees(rot.x), XMConvertToDegrees(rot.y), XMConvertToDegrees(rot.z) };
-		if (ImGui::DragFloat3("Rotation", deg, 0.5f))
+		Vector3 deg(XMConvertToDegrees(rot.x), XMConvertToDegrees(rot.y), XMConvertToDegrees(rot.z));
+		if (Vector3Field("Rotation", deg, 0.5f, labelWidth))
 		{
-			object->SetRotation({ XMConvertToRadians(deg[0]), XMConvertToRadians(deg[1]), XMConvertToRadians(deg[2]) });
+			object->SetRotation({ XMConvertToRadians(deg.x), XMConvertToRadians(deg.y), XMConvertToRadians(deg.z) });
 		}
 
 		Vector3 scale = object->GetScale();
-		if (ImGui::DragFloat3("Scale", &scale.x, 0.01f)) object->SetScale(scale);
+		if (Vector3Field("Scale", scale, 0.01f, labelWidth)) object->SetScale(scale);
+		ImGui::Spacing();
 	}
 
+	//---------------------------------------------------------
 	// コンポーネント
+	//---------------------------------------------------------
 	int index = 0;
 	Component* removeComponent = nullptr;	// 回している最中に消すと壊れるので、ループの後で消す
-	for (Component* component : object->GetComponents())
+	Component* moveUp = nullptr;
+	Component* moveDown = nullptr;
+	const std::list<Component*>& components = object->GetComponents();
+	for (Component* component : components)
 	{
-		ImGui::PushID(index++);
-		std::string label = TypeName(typeid(*component).name());
-		bool open = ImGui::CollapsingHeader(label.c_str(), ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_AllowOverlap);
+		ImGui::PushID(index);
+		std::string typeName = TypeName(typeid(*component).name());
+		std::string sourceFile = ScriptTool::FindSourceFile(typeName);
 
-		// 見出しの右クリック、または右端の「…」ボタンでメニュー
+		bool open = ImGui::CollapsingHeader("##ComponentHeader", ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_AllowOverlap);
+
 		// 見出しをダブルクリック：スクリプトを Visual Studio で開く
-		std::string sourceFile = ScriptTool::FindSourceFile(label);
 		if (!sourceFile.empty() && ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
 		{
 			ScriptTool::OpenInEditor(sourceFile);
@@ -1513,30 +1857,62 @@ void EditorGUI::DrawInspector()
 
 		if (ImGui::BeginPopupContextItem("ComponentMenu"))
 		{
+			if (ImGui::MenuItem("Reset"))
+			{
+				// 作り直した直後の値を読み込む
+				Component* fresh = ComponentRegistry::Create(typeName, object);
+				if (fresh)
+				{
+					nlohmann::json data;
+					fresh->Serialize(data);
+					delete fresh;
+					component->Deserialize(data);
+				}
+			}
+			ImGui::Separator();
+			if (ImGui::MenuItem("上へ移動", nullptr, false, index > 0)) moveUp = component;
+			if (ImGui::MenuItem("下へ移動", nullptr, false, index + 1 < (int)components.size())) moveDown = component;
+			ImGui::Separator();
 			if (ImGui::MenuItem("スクリプトを編集", nullptr, false, !sourceFile.empty())) ScriptTool::OpenInEditor(sourceFile);
 			ImGui::Separator();
 			if (ImGui::MenuItem("コンポーネントを削除")) removeComponent = component;
 			ImGui::EndPopup();
 		}
-		ImGui::SameLine();
-		ImGui::SetCursorPosX(ImGui::GetWindowWidth() - ImGui::GetFrameHeight() - ImGui::GetStyle().WindowPadding.x - 4.0f);
+
+		const char* icon = "#";
+		ImVec4 iconColor(0.45f, 0.75f, 0.45f, 1.0f);	// スクリプト＝緑
+		GetComponentIcon(typeName, icon, iconColor);
+
+		bool enabled = component->IsEnabled();
+		ComponentHeaderLabel(NicifyName(typeName).c_str(), icon, iconColor, &enabled);
+		if (enabled != component->IsEnabled()) component->SetEnabled(enabled);
 		if (ImGui::SmallButton("...")) ImGui::OpenPopup("ComponentMenu");
 
 		if (open)
 		{
-			bool enabled = component->IsEnabled();
-			if (ImGui::Checkbox("Enabled", &enabled)) component->SetEnabled(enabled);
-
+			// 無効なコンポーネントは中身を少し薄く表示する
+			if (!enabled) ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.6f);
+			ImGui::Indent(6.0f);
 			component->OnInspectorGUI();
+			ImGui::Unindent(6.0f);
+			if (!enabled) ImGui::PopStyleVar();
+			ImGui::Spacing();
 		}
 		ImGui::PopID();
+		index++;
 	}
 
 	if (removeComponent) object->RemoveComponent(removeComponent);
+	if (moveUp)   object->MoveComponent(moveUp, -1);
+	if (moveDown) object->MoveComponent(moveDown, +1);
 
 	// コンポーネントを追加（登録されているものを一覧から選ぶ）
 	ImGui::Separator();
-	if (ImGui::Button("Add Component", ImVec2(-1.0f, 0.0f))) ImGui::OpenPopup("AddComponentPopup");
+	ImGui::Spacing();
+	const float addWidth = 230.0f;
+	float addX = (ImGui::GetContentRegionAvail().x - addWidth) * 0.5f;
+	if (addX > 0.0f) ImGui::SetCursorPosX(ImGui::GetCursorPosX() + addX);
+	if (ImGui::Button("Add Component", ImVec2(addWidth, 0.0f))) ImGui::OpenPopup("AddComponentPopup");
 
 	// Project の Scripts からスクリプトをドロップしても追加できる
 	std::string droppedScript;
@@ -1616,6 +1992,7 @@ void EditorGUI::DrawInspector()
 		}
 		ImGui::EndPopup();
 	}
+
 	ImGui::End();
 }
 

@@ -19,6 +19,9 @@ private:
 
 	unsigned int m_ID = NewID();
 	std::string  m_Name = "GameObject";
+	std::string  m_Tag = "Untagged";	// タグ（Player / Enemy など。ProjectSettings::Tags から選ぶ）
+	bool m_Active = true;	// false にすると Update / Draw / 当たり判定をしない（子も止まる）
+	bool m_Static = false;	// Inspector の Static。今は目印だけ
 
 	GameObject* m_Parent = nullptr;	// 親（いなければ nullptr）
 	std::vector<GameObject*> m_Children;			// 子
@@ -47,6 +50,28 @@ public:
 	unsigned int GetID() const { return m_ID; }
 	const std::string& GetName() const { return m_Name; }
 	void SetName(const std::string& name) { m_Name = name; }
+
+	//----------------------------------------------------------
+	// アクティブ・タグ・Static（Unity の SetActive / tag / CompareTag）
+	//----------------------------------------------------------
+	void SetActive(bool active) { m_Active = active; }
+	bool IsActiveSelf() const { return m_Active; }
+	// 自分と親がすべてアクティブなら true（Unity の activeInHierarchy）
+	bool IsActiveInHierarchy() const
+	{
+		for (const GameObject* p = this; p != nullptr; p = p->m_Parent)
+		{
+			if (!p->m_Active) return false;
+		}
+		return true;
+	}
+
+	const std::string& GetTag() const { return m_Tag; }
+	void SetTag(const std::string& tag) { m_Tag = tag; }
+	bool CompareTag(const std::string& tag) const { return m_Tag == tag; }
+
+	void SetStatic(bool isStatic) { m_Static = isStatic; }
+	bool IsStatic() const { return m_Static; }
 
 	//----------------------------------------------------------
 	// Transform
@@ -197,6 +222,23 @@ public:
 		m_Components.erase(it);
 		component->Uninit();
 		delete component;
+	}
+
+	// コンポーネントの並び順を変える（direction: -1 で上、+1 で下）
+	void MoveComponent(Component* component, int direction)
+	{
+		auto it = std::find(m_Components.begin(), m_Components.end(), component);
+		if (it == m_Components.end()) return;
+		if (direction < 0 && it != m_Components.begin())
+		{
+			auto prev = std::prev(it);
+			std::swap(*prev, *it);
+		}
+		else if (direction > 0)
+		{
+			auto next = std::next(it);
+			if (next != m_Components.end()) std::swap(*next, *it);
+		}
 	}
 
 	// 名前から作ったコンポーネントを付ける（シーン読み込み・Add Component 用）

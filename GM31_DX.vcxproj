@@ -104,7 +104,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>false</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ENGINE_EDITOR</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <AdditionalIncludeDirectories>$(ProjectDir)Frame;$(ProjectDir)Component;$(ProjectDir)Object;$(ProjectDir)Script;$(ProjectDir)Scene;$(ProjectDir);$(ProjectDir)ThirdParty\imgui;$(ProjectDir)ThirdParty\ImGuizmo;$(ProjectDir)ThirdParty;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -122,7 +122,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>false</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ENGINE_EDITOR</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <AdditionalIncludeDirectories>$(ProjectDir)Frame;$(ProjectDir)Component;$(ProjectDir)Object;$(ProjectDir)Script;$(ProjectDir)Scene;$(ProjectDir);$(ProjectDir)ThirdParty\imgui;$(ProjectDir)ThirdParty\ImGuizmo;$(ProjectDir)ThirdParty;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -134,6 +134,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Frame\GameBuilder.cpp" />
+    <ClCompile Include="Frame\ProjectSettings.cpp" />
     <ClCompile Include="Script\Prefabs.cpp" />
     <ClCompile Include="Script\BulletController.cpp" />
     <ClCompile Include="Script\EnemyController.cpp" />
@@ -185,6 +187,8 @@
     <ClCompile Include="ThirdParty\imgui\imgui_widgets.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Frame\GameBuilder.h" />
+    <ClInclude Include="Frame\ProjectSettings.h" />
     <ClInclude Include="Script\Prefabs.h" />
     <ClInclude Include="Script\BulletController.h" />
     <ClInclude Include="Script\EnemyController.h" />

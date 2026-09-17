@@ -161,6 +161,7 @@ void Collider::Check()
 			if (!a->IsEnabled() || !b->IsEnabled()) continue;			//無効にしたコライダー
 			if (objA == objB) continue;									//同じオブジェクト同士
 			if (objA->IsDestroyed() || objB->IsDestroyed()) continue;	//消える予定のもの
+			if (!objA->IsActiveInHierarchy() || !objB->IsActiveInHierarchy()) continue;	//非アクティブ
 			if (a->m_IsStatic && b->m_IsStatic) continue;				//動かないもの同士
 
 			Vector3 push;
@@ -202,7 +203,7 @@ void Collider::DrawGizmo()
 
 	for (Collider* collider : m_List)
 	{
-		if (collider->m_GameObject->IsDestroyed()) continue;
+		if (collider->m_GameObject->IsDestroyed() || !collider->m_GameObject->IsActiveInHierarchy()) continue;
 		if (!collider->IsEnabled()) continue;	//無効にしたコライダーは表示しない
 
 		ColliderShape shape = collider->GetShape();
