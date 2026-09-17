@@ -137,7 +137,15 @@ void GameBuilder::Start(bool runAfterBuild)
 //=============================================================
 static bool CopyToOutput()
 {
-	std::string exe = "x64\\Game\\" + FindFile("*.vcxproj").substr(0, FindFile("*.vcxproj").size() - 8) + ".exe";
+	// Game 構成の出力先は x64\Game\<プロジェクト名>.exe
+	std::string project = FindFile("*.vcxproj");
+	if (project.empty())
+	{
+		Debug::LogError("vcxproj が見つかりません");
+		return false;
+	}
+
+	std::string exe = "x64\\Game\\" + project.substr(0, project.size() - strlen(".vcxproj")) + ".exe";
 	if (GetFileAttributesA(exe.c_str()) == INVALID_FILE_ATTRIBUTES)
 	{
 		Debug::LogError("exe が見つかりません: %s", exe.c_str());

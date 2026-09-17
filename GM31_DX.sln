@@ -11,6 +11,7 @@ Global
 		Debug|x86 = Debug|x86
 		Release|x64 = Release|x64
 		Release|x86 = Release|x86
+		Game|x64 = Game|x64
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{D95ABCA7-2D2A-4C5F-98E6-30AFAFBF4A6D}.Debug|x64.ActiveCfg = Debug|x64
@@ -21,6 +22,8 @@ Global
 		{D95ABCA7-2D2A-4C5F-98E6-30AFAFBF4A6D}.Release|x64.Build.0 = Release|x64
 		{D95ABCA7-2D2A-4C5F-98E6-30AFAFBF4A6D}.Release|x86.ActiveCfg = Release|Win32
 		{D95ABCA7-2D2A-4C5F-98E6-30AFAFBF4A6D}.Release|x86.Build.0 = Release|Win32
+		{D95ABCA7-2D2A-4C5F-98E6-30AFAFBF4A6D}.Game|x64.ActiveCfg = Game|x64
+		{D95ABCA7-2D2A-4C5F-98E6-30AFAFBF4A6D}.Game|x64.Build.0 = Game|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

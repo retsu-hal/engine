@@ -4,6 +4,7 @@ x64/
 x86/
 Debug/
 Release/
+Game/
 *.user
 *.ilk
 *.pdb
@@ -15,6 +16,9 @@ Release/
 *.log
 *.recipe
 *.exe
+
+# ゲーム用 exe の出力先（Build and Run）
+Build/
 
 # シェーダーはビルド時に生成される
 *.cso
