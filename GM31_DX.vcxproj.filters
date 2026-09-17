@@ -79,6 +79,15 @@
     <ClCompile Include="Component\CameraComponent.cpp">
       <Filter>Component</Filter>
     </ClCompile>
+    <ClCompile Include="Frame\ScriptTool.cpp">
+      <Filter>Frame</Filter>
+    </ClCompile>
+    <ClCompile Include="Frame\Console.cpp">
+      <Filter>Frame</Filter>
+    </ClCompile>
+    <ClCompile Include="Frame\SceneGrid.cpp">
+      <Filter>Frame</Filter>
+    </ClCompile>
     <ClCompile Include="Frame\UndoSystem.cpp">
       <Filter>Frame</Filter>
     </ClCompile>
@@ -219,6 +228,15 @@
     </ClInclude>
     <ClInclude Include="Component\CameraComponent.h">
       <Filter>Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Frame\ScriptTool.h">
+      <Filter>Frame</Filter>
+    </ClInclude>
+    <ClInclude Include="Frame\Console.h">
+      <Filter>Frame</Filter>
+    </ClInclude>
+    <ClInclude Include="Frame\SceneGrid.h">
+      <Filter>Frame</Filter>
     </ClInclude>
     <ClInclude Include="Frame\UndoSystem.h">
       <Filter>Frame</Filter>

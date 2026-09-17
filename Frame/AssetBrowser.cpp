@@ -10,6 +10,8 @@
 #include "AnimationModel.h"
 #include "BillboardRenderer.h"
 #include "Audio.h"
+#include "ScriptTool.h"
+#include "Console.h"
 #include <algorithm>
 #include <cctype>
 
@@ -17,8 +19,223 @@ std::string                      AssetBrowser::m_CurrentFolder = "asset";
 std::vector<AssetBrowser::Entry> AssetBrowser::m_Entries;
 bool                             AssetBrowser::m_NeedRefresh = true;
 float                            AssetBrowser::m_IconSize = 72.0f;
-char                             AssetBrowser::m_NewFolderName[128] = "";
-bool                             AssetBrowser::m_OpenNewFolderPopup = false;
+std::string                      AssetBrowser::m_SelectedPath;
+AssetBrowser::Action             AssetBrowser::m_PendingAction = AssetBrowser::Action::None;
+std::string                      AssetBrowser::m_ActionPath;
+char                             AssetBrowser::m_NameBuffer[128] = "";
+
+//=============================================================
+// ファイル操作
+//=============================================================
+static std::string RemoveInvalidChars(const char* text)
+{
+	std::string result;
+	for (const char* p = text; *p; p++)
+		if (strchr("\\/:*?\"<>|", *p) == nullptr) result += *p;
+	return result;
+}
+
+static std::string FolderOf(const std::string& path)
+{
+	size_t slash = path.find_last_of('\\');
+	return (slash == std::string::npos) ? std::string() : path.substr(0, slash);
+}
+
+static std::string ExtensionOf(const std::string& path)
+{
+	size_t slash = path.find_last_of('\\');
+	size_t dot = path.find_last_of('.');
+	return (dot == std::string::npos || (slash != std::string::npos && dot < slash)) ? std::string() : path.substr(dot);
+}
+
+void AssetBrowser::ShowInExplorer(const std::string& path)
+{
+	DWORD attributes = GetFileAttributesW(Utf8ToWide(path).c_str());
+	if (attributes != INVALID_FILE_ATTRIBUTES && !(attributes & FILE_ATTRIBUTE_DIRECTORY))
+	{
+		// ファイルはフォルダを開いて選んだ状態にする
+		std::wstring parameter = L"/select,\"" + Utf8ToWide(path) + L"\"";
+		ShellExecuteW(nullptr, L"open", L"explorer.exe", parameter.c_str(), nullptr, SW_SHOWNORMAL);
+	}
+	else
+	{
+		ShellExecuteW(nullptr, L"open", Utf8ToWide(path).c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+	}
+}
+
+void AssetBrowser::StartAction(Action action, const std::string& path)
+{
+	m_PendingAction = action;
+	m_ActionPath = path;
+
+	switch (action)
+	{
+	case Action::NewFolder: strncpy_s(m_NameBuffer, "NewFolder", _TRUNCATE); break;
+	case Action::NewScene:  strncpy_s(m_NameBuffer, "NewScene", _TRUNCATE); break;
+	case Action::NewScript: strncpy_s(m_NameBuffer, "NewBehaviour", _TRUNCATE); break;
+	case Action::Rename:    strncpy_s(m_NameBuffer, GetStem(path).c_str(), _TRUNCATE); break;
+	default: break;
+	}
+}
+
+void AssetBrowser::DrawCreateMenu()
+{
+	if (ImGui::MenuItem("フォルダ")) StartAction(Action::NewFolder, m_CurrentFolder);
+	if (ImGui::MenuItem("シーン"))   StartAction(Action::NewScene, m_CurrentFolder);
+	ImGui::Separator();
+
+	// スクリプトはインクルードパスが通っている Script フォルダ（とその中）に作る
+	bool inScriptFolder = (m_CurrentFolder == "Script" || m_CurrentFolder.compare(0, 7, "Script\\") == 0);
+	if (ImGui::MenuItem("C++ スクリプト")) StartAction(Action::NewScript, inScriptFolder ? m_CurrentFolder : std::string("Script"));
+}
+
+//=============================================================
+// 右クリックメニュー（target が nullptr なら何もないところ）
+//=============================================================
+void AssetBrowser::DrawContextMenu(const Entry* target)
+{
+	if (ImGui::BeginMenu("作成"))
+	{
+		DrawCreateMenu();
+		ImGui::EndMenu();
+	}
+
+	if (ImGui::MenuItem("エクスプローラーで表示")) ShowInExplorer(target ? target->Path : m_CurrentFolder);
+
+	if (ImGui::MenuItem("開く", nullptr, false, target != nullptr))
+	{
+		if (target->Type == AssetType::Folder)     { m_CurrentFolder = target->Path; m_NeedRefresh = true; }
+		else if (target->Type == AssetType::Scene) EditorGUI::OpenScene(target->Path);
+		else if (target->Type == AssetType::Script) ScriptTool::OpenInEditor(target->Path);
+		else ShellExecuteW(nullptr, L"open", Utf8ToWide(target->Path).c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+	}
+
+	// スクリプトの削除・名前の変更はプロジェクト（vcxproj）も直す必要があるので Visual Studio で行う
+	bool editable = (target != nullptr && target->Type != AssetType::Script);
+	if (ImGui::MenuItem("削除", "Delete", false, editable))      StartAction(Action::Delete, target->Path);
+	if (ImGui::MenuItem("名前の変更", "F2", false, editable))     StartAction(Action::Rename, target->Path);
+	if (target && target->Type == AssetType::Script) ImGui::TextDisabled("  スクリプトの削除・名前の変更は Visual Studio で");
+	if (ImGui::MenuItem("パスをコピー", "Alt+Ctrl+C", false, target != nullptr)) ImGui::SetClipboardText(target->Path.c_str());
+
+	ImGui::Separator();
+	if (ImGui::MenuItem("更新", "Ctrl+R")) m_NeedRefresh = true;
+}
+
+//=============================================================
+// 名前入力・削除確認のダイアログ
+//=============================================================
+void AssetBrowser::DrawDialogs()
+{
+	static const char* POPUP_NAME = "AssetDialog";
+	static Action openAction = Action::None;
+
+	if (m_PendingAction != Action::None)
+	{
+		openAction = m_PendingAction;
+		m_PendingAction = Action::None;
+		ImGui::OpenPopup(POPUP_NAME);
+	}
+
+	if (!ImGui::BeginPopupModal(POPUP_NAME, nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar)) return;
+
+	bool close = ImGui::IsKeyPressed(ImGuiKey_Escape);
+
+	if (openAction == Action::Delete)
+	{
+		ImGui::Text("削除しますか？（ごみ箱に移動します）");
+		ImGui::TextDisabled("%s", m_ActionPath.c_str());
+		if (ImGui::Button("削除", ImVec2(120.0f, 0.0f)) || ImGui::IsKeyPressed(ImGuiKey_Enter))
+		{
+			// SHFileOperation はパスの最後に \0 が2つ必要
+			std::wstring from = Utf8ToWide(m_ActionPath);
+			from.push_back(L'\0');
+			SHFILEOPSTRUCTW operation{};
+			operation.wFunc = FO_DELETE;
+			operation.pFrom = from.c_str();
+			operation.fFlags = FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_SILENT;
+			SHFileOperationW(&operation);
+
+			if (m_SelectedPath == m_ActionPath) m_SelectedPath.clear();
+			m_NeedRefresh = true;
+			close = true;
+		}
+	}
+	else
+	{
+		const char* title = "名前";
+		if (openAction == Action::NewFolder) title = "新しいフォルダの名前";
+		if (openAction == Action::NewScene)  title = "新しいシーンの名前";
+		if (openAction == Action::NewScript) title = "新しいスクリプト（クラス）の名前";
+		if (openAction == Action::Rename)    title = "新しい名前";
+		ImGui::Text("%s", title);
+
+		ImGui::SetNextItemWidth(280.0f);
+		if (ImGui::IsWindowAppearing()) ImGui::SetKeyboardFocusHere();
+		bool enter = ImGui::InputText("##name", m_NameBuffer, sizeof(m_NameBuffer),
+			ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll);
+
+		std::string name = RemoveInvalidChars(m_NameBuffer);
+		std::string newPath;
+		if (openAction == Action::NewFolder) newPath = m_ActionPath + "\\" + name;
+		if (openAction == Action::NewScene)  newPath = m_ActionPath + "\\" + name + ".json";
+		if (openAction == Action::NewScript) newPath = m_ActionPath + "\\" + name + ".h / .cpp";
+		if (openAction == Action::Rename)    newPath = FolderOf(m_ActionPath) + "\\" + name + ExtensionOf(m_ActionPath);
+
+		bool exists = !name.empty() && newPath != m_ActionPath && GetFileAttributesW(Utf8ToWide(newPath).c_str()) != INVALID_FILE_ATTRIBUTES;
+		if (openAction == Action::NewScript)
+			exists = GetFileAttributesA((m_ActionPath + "\\" + name + ".cpp").c_str()) != INVALID_FILE_ATTRIBUTES;
+		ImGui::TextDisabled("%s", newPath.c_str());
+		if (exists) ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.3f, 1.0f), "同じ名前があります");
+
+		bool validName = (openAction != Action::NewScript) || ScriptTool::IsValidClassName(name);
+		if (!validName) ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.3f, 1.0f), "英字で始め、英数字と _ だけにしてください");
+		if (openAction == Action::NewScript)
+			ImGui::TextDisabled("作成後、Visual Studio でプロジェクトを再読み込みしてビルドしてください");
+
+		bool valid = !name.empty() && !exists && validName;
+		ImGui::BeginDisabled(!valid);
+		if (ImGui::Button("OK", ImVec2(120.0f, 0.0f)) || (enter && valid))
+		{
+			std::wstring wide = Utf8ToWide(newPath);
+			if (openAction == Action::NewFolder)
+			{
+				CreateDirectoryW(wide.c_str(), nullptr);
+			}
+			else if (openAction == Action::NewScene)
+			{
+				// カメラが1つだけある空のシーン
+				FILE* file = _wfopen(wide.c_str(), L"wb");
+				if (file)
+				{
+					fputs("{\n  \"version\": 1,\n  \"objects\": [\n    { \"id\": 1, \"class\": \"GameObject\", \"name\": \"Main Camera\", \"parent\": 0, \"layer\": 1,\n"
+						"      \"position\": [0, 1, -10], \"rotation\": [0, 0, 0], \"scale\": [1, 1, 1],\n"
+						"      \"components\": [ { \"type\": \"CameraComponent\", \"enabled\": true } ] }\n  ]\n}\n", file);
+					fclose(file);
+				}
+			}
+			else if (openAction == Action::NewScript)
+			{
+				std::string error;
+				if (!ScriptTool::CreateScript(m_ActionPath, name, error)) Debug::LogError("スクリプトを作れませんでした: %s", error.c_str());
+				m_CurrentFolder = m_ActionPath;	// 作った場所を表示する
+			}
+			else if (openAction == Action::Rename && newPath != m_ActionPath)
+			{
+				MoveFileW(Utf8ToWide(m_ActionPath).c_str(), wide.c_str());
+				if (m_SelectedPath == m_ActionPath) m_SelectedPath = newPath;
+			}
+			m_NeedRefresh = true;
+			close = true;
+		}
+		ImGui::EndDisabled();
+	}
+
+	ImGui::SameLine();
+	if (ImGui::Button("キャンセル", ImVec2(120.0f, 0.0f))) close = true;
+
+	if (close) ImGui::CloseCurrentPopup();
+	ImGui::EndPopup();
+}
 
 static const char* PAYLOAD_ASSET = "ASSET_PATH";
 
@@ -42,6 +259,7 @@ AssetBrowser::AssetType AssetBrowser::GetType(const std::string& path)
 	if (ext == "png" || ext == "jpg" || ext == "jpeg" || ext == "bmp") return AssetType::Texture;
 	if (ext == "wav") return AssetType::Audio;
 	if (ext == "json") return AssetType::Scene;
+	if (ext == "cpp" || ext == "h" || ext == "hpp") return AssetType::Script;
 	return AssetType::Other;
 }
 
@@ -126,6 +344,10 @@ void AssetBrowser::DrawIcon(const Entry& entry, const ImVec2& min, const ImVec2&
 	case AssetType::AnimationModel: color = IM_COL32(120, 90, 200, 255);  label = "FBX";   break;
 	case AssetType::Audio:          color = IM_COL32(60, 160, 110, 255);  label = "WAV";   break;
 	case AssetType::Scene:          color = IM_COL32(200, 110, 60, 255);  label = "SCENE"; break;
+	case AssetType::Script:
+		color = IM_COL32(40, 120, 190, 255);
+		label = (entry.Path.size() >= 2 && entry.Path.substr(entry.Path.size() - 2) == ".h") ? "C++ .h" : "C++";
+		break;
 	default: break;
 	}
 	dl->AddRectFilled(ImVec2(min.x + w * 0.12f, min.y + w * 0.12f), ImVec2(max.x - w * 0.12f, max.y - w * 0.12f), color, 6.0f);
@@ -136,15 +358,30 @@ void AssetBrowser::DrawIcon(const Entry& entry, const ImVec2& min, const ImVec2&
 //=============================================================
 // Project ウィンドウ
 //=============================================================
-void AssetBrowser::Draw()
+void AssetBrowser::Draw(bool* open)
 {
-	if (!ImGui::Begin("Project"))
+	if (!ImGui::Begin("Project", open))
 	{
 		ImGui::End();
 		return;
 	}
 
 	if (m_NeedRefresh) Refresh();
+
+	// 表示するフォルダの切り替え（アセット / スクリプト）
+	{
+		bool inScript = (m_CurrentFolder.compare(0, 6, "Script") == 0);
+		if (!inScript) ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+		if (ImGui::SmallButton("Assets")) { m_CurrentFolder = "asset"; m_NeedRefresh = true; }
+		if (!inScript) ImGui::PopStyleColor();
+		ImGui::SameLine();
+		if (inScript) ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+		if (ImGui::SmallButton("Scripts")) { m_CurrentFolder = "Script"; m_NeedRefresh = true; }
+		if (inScript) ImGui::PopStyleColor();
+		ImGui::SameLine();
+		ImGui::TextDisabled("|");
+		ImGui::SameLine();
+	}
 
 	// パンくずリスト（asset > model）。押すとそのフォルダへ戻る
 	{
@@ -169,11 +406,12 @@ void AssetBrowser::Draw()
 			start = end + 1;
 		}
 
-		ImGui::SameLine(ImGui::GetWindowWidth() - 150.0f);
-		if (ImGui::SmallButton("＋フォルダ"))
+		ImGui::SameLine(ImGui::GetWindowWidth() - 60.0f);
+		if (ImGui::SmallButton("＋")) ImGui::OpenPopup("##CreateButtonMenu");
+		if (ImGui::BeginPopup("##CreateButtonMenu"))
 		{
-			strncpy_s(m_NewFolderName, "NewFolder", _TRUNCATE);
-			m_OpenNewFolderPopup = true;
+			DrawCreateMenu();
+			ImGui::EndPopup();
 		}
 		ImGui::SameLine();
 		if (ImGui::SmallButton("更新")) m_NeedRefresh = true;
@@ -193,19 +431,23 @@ void AssetBrowser::Draw()
 
 	ImGui::BeginChild("##AssetGrid", ImVec2(0, 0), ImGuiChildFlags_None, resize ? ImGuiWindowFlags_NoScrollWithMouse : 0);
 
-	// 何もないところを右クリック：フォルダを作る
+	// 何もないところを右クリック
 	if (ImGui::BeginPopupContextWindow("##AssetContext", ImGuiPopupFlags_MouseButtonRight | ImGuiPopupFlags_NoOpenOverItems))
 	{
-		if (ImGui::MenuItem("フォルダを作成"))
-		{
-			strncpy_s(m_NewFolderName, "NewFolder", _TRUNCATE);
-			m_OpenNewFolderPopup = true;
-		}
-		if (ImGui::MenuItem("エクスプローラーで開く"))
-		{
-			ShellExecuteW(nullptr, L"open", Utf8ToWide(m_CurrentFolder).c_str(), nullptr, nullptr, SW_SHOWNORMAL);
-		}
+		DrawContextMenu(nullptr);
 		ImGui::EndPopup();
+	}
+
+	// ショートカット（Project にマウスがあるとき）
+	if (ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows) && !io.WantTextInput)
+	{
+		if (io.KeyCtrl && !io.KeyAlt && ImGui::IsKeyPressed(ImGuiKey_R, false)) m_NeedRefresh = true;
+		if (!m_SelectedPath.empty())
+		{
+			if (ImGui::IsKeyPressed(ImGuiKey_Delete, false)) StartAction(Action::Delete, m_SelectedPath);
+			if (ImGui::IsKeyPressed(ImGuiKey_F2, false))     StartAction(Action::Rename, m_SelectedPath);
+			if (io.KeyCtrl && io.KeyAlt && ImGui::IsKeyPressed(ImGuiKey_C, false)) ImGui::SetClipboardText(m_SelectedPath.c_str());
+		}
 	}
 	float cellWidth = m_IconSize + 16.0f;
 	int columns = (int)(ImGui::GetContentRegionAvail().x / cellWidth);
@@ -223,12 +465,22 @@ void AssetBrowser::Draw()
 		ImVec2 cursor = ImGui::GetCursorScreenPos();
 		ImGui::InvisibleButton("##asset", ImVec2(cellWidth, m_IconSize + ImGui::GetTextLineHeight() + 8.0f));
 		bool hovered = ImGui::IsItemHovered();
+		if (ImGui::IsItemClicked(ImGuiMouseButton_Left) || ImGui::IsItemClicked(ImGuiMouseButton_Right)) m_SelectedPath = entry.Path;
+
+		// ファイルやフォルダを右クリック
+		if (ImGui::BeginPopupContextItem("##AssetItemContext"))
+		{
+			m_SelectedPath = entry.Path;
+			DrawContextMenu(&entry);
+			ImGui::EndPopup();
+		}
 
 		// ダブルクリック：フォルダなら入る、シーンなら開く
 		if (hovered && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
 		{
 			if (entry.Type == AssetType::Folder) openFolder = entry.Path;
 			else if (entry.Type == AssetType::Scene) EditorGUI::OpenScene(entry.Path);
+			else if (entry.Type == AssetType::Script) ScriptTool::OpenInEditor(entry.Path);	// Visual Studio で開く
 		}
 
 		// ドラッグ元（フォルダ以外）
@@ -239,6 +491,10 @@ void AssetBrowser::Draw()
 			ImGui::EndDragDropSource();
 		}
 
+		if (entry.Path == m_SelectedPath)
+		{
+			ImGui::GetWindowDrawList()->AddRectFilled(cursor, ImVec2(cursor.x + cellWidth, cursor.y + m_IconSize + ImGui::GetTextLineHeight() + 8.0f), IM_COL32(60, 110, 200, 90), 4.0f);
+		}
 		if (hovered)
 		{
 			ImGui::GetWindowDrawList()->AddRectFilled(cursor, ImGui::GetItemRectMax(), IM_COL32(255, 255, 255, 25), 4.0f);
@@ -266,40 +522,7 @@ void AssetBrowser::Draw()
 
 	ImGui::EndChild();
 
-	// フォルダ名の入力
-	if (m_OpenNewFolderPopup)
-	{
-		ImGui::OpenPopup("NewFolder");
-		m_OpenNewFolderPopup = false;
-	}
-	if (ImGui::BeginPopupModal("NewFolder", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
-	{
-		ImGui::Text("%s に作るフォルダの名前", m_CurrentFolder.c_str());
-		ImGui::SetNextItemWidth(260.0f);
-		if (ImGui::IsWindowAppearing()) ImGui::SetKeyboardFocusHere();
-		bool enter = ImGui::InputText("##folder", m_NewFolderName, sizeof(m_NewFolderName),
-			ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll);
-
-		std::string name;
-		for (const char* p = m_NewFolderName; *p; p++)
-			if (strchr("\\/:*?\"<>|.", *p) == nullptr) name += *p;
-
-		std::wstring path = Utf8ToWide(m_CurrentFolder + "\\" + name);
-		bool exists = !name.empty() && GetFileAttributesW(path.c_str()) != INVALID_FILE_ATTRIBUTES;
-		if (exists) ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.3f, 1.0f), "同じ名前があります");
-
-		ImGui::BeginDisabled(name.empty() || exists);
-		if (ImGui::Button("作成", ImVec2(120.0f, 0.0f)) || (enter && !name.empty() && !exists))
-		{
-			CreateDirectoryW(path.c_str(), nullptr);
-			m_NeedRefresh = true;
-			ImGui::CloseCurrentPopup();
-		}
-		ImGui::EndDisabled();
-		ImGui::SameLine();
-		if (ImGui::Button("キャンセル", ImVec2(120.0f, 0.0f)) || ImGui::IsKeyPressed(ImGuiKey_Escape)) ImGui::CloseCurrentPopup();
-		ImGui::EndPopup();
-	}
+	DrawDialogs();
 
 	ImGui::End();
 
@@ -339,7 +562,7 @@ bool AssetBrowser::AcceptDrop(AssetType type, std::string& outPath)
 GameObject* AssetBrowser::CreateObject(const std::string& path, const Vector3& position)
 {
 	AssetType type = GetType(path);
-	if (type == AssetType::Folder || type == AssetType::Scene || type == AssetType::Other) return nullptr;
+	if (type == AssetType::Folder || type == AssetType::Scene || type == AssetType::Script || type == AssetType::Other) return nullptr;
 
 	GameObject* object = Manager::CreateGameObject(GetStem(path));
 	object->SetPosition(position);

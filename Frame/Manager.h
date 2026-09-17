@@ -23,6 +23,9 @@ private:
 	static std::function<Scene*()> m_SceneFactory;		// 今のシーンを作り直すための関数（Stop で使う）
 	static std::function<Scene*()> m_NextSceneFactory;
 	static float m_ChangeSceneTime;
+	static bool  m_DrawingSceneView;
+
+	static void DrawWorld(bool sceneView);
 
 public:
 	static void Init();
@@ -30,6 +33,9 @@ public:
 	static void Update();
 	static void Draw();
 	static float GetDeltaTime() { return m_DeltaTime; }
+
+	// 今 Scene ビューを描いているか（エディタ用の線などを Game ビューに出さないため）
+	static bool IsDrawingSceneView() { return m_DrawingSceneView; }
 	static void SetDeltaTime(float dt) { m_DeltaTime = dt; }
 
 	static const std::list<GameObject*>& GetAllGameObjects() { return m_GameObjects; }

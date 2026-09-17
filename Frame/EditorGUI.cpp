@@ -14,6 +14,10 @@
 #include "Prefabs.h"
 #include "UndoSystem.h"
 #include "CameraComponent.h"
+#include "Console.h"
+#include "SceneGrid.h"
+#include "Gizmo.h"
+#include "ScriptTool.h"
 #include "MeshField.h"
 #include "imgui_internal.h"	// BeginDragDropTargetCustom
 #include <typeinfo>
@@ -32,7 +36,7 @@ bool         EditorGUI::m_SceneHovered = false;
 ImDrawList*  EditorGUI::m_SceneDrawList = nullptr;
 float        EditorGUI::m_SceneMin[2] = { 0.0f, 0.0f };
 float        EditorGUI::m_SceneMax[2] = { 0.0f, 0.0f };
-GizmoOperation EditorGUI::m_GizmoOperation = GizmoOperation::Translate;
+int          EditorGUI::m_GizmoOperation = 0;
 bool         EditorGUI::m_GizmoLocal = false;
 bool         EditorGUI::m_GizmoActive = false;
 std::string  EditorGUI::m_ScenePath = "asset\\scene\\GameScene.json";
@@ -45,6 +49,19 @@ unsigned int EditorGUI::m_RenamingID = 0;
 char         EditorGUI::m_RenameBuffer[128] = "";
 bool         EditorGUI::m_RenameFocus = false;
 std::string  EditorGUI::m_RestoreSelectName;
+bool         EditorGUI::m_SceneVisible = true;
+bool         EditorGUI::m_GameHovered = false;
+bool         EditorGUI::m_GameVisible = true;
+unsigned int EditorGUI::m_DockSpaceID = 0;
+bool         EditorGUI::m_ResetLayout = false;
+int          EditorGUI::m_FocusWindow = 0;
+bool         EditorGUI::m_ShowScene = true;
+bool         EditorGUI::m_ShowGame = true;
+bool         EditorGUI::m_ShowHierarchy = true;
+bool         EditorGUI::m_ShowInspector = true;
+bool         EditorGUI::m_ShowProject = true;
+bool         EditorGUI::m_ShowConsole = true;
+bool         EditorGUI::m_ShowShortcuts = false;
 
 //=============================================================
 // 今シーンビューに映しているカメラの行列（止めている間はエディタカメラ、Play 中はゲームカメラ）
@@ -102,147 +119,6 @@ static Vector3 RotationFromQuaternion(FXMVECTOR quaternion)
 	return Vector3(pitch, yaw, roll);
 }
 
-// 2D のオブジェクト（Layer 3）はシーンビューの選択・ギズモの対象にしない
-static const int LAYER_2D = 3;
-
-//=============================================================
-// マウス位置から奥に伸ばした光線
-// シーンビューの四角の中での位置を NDC に直し、ビュー射影の逆行列で世界に戻す
-//=============================================================
-static bool ScreenRayFromMouse(const float rectMin[2], const float rectMax[2],
-	Vector3& outOrigin, Vector3& outDirection, XMMATRIX* outViewProjection = nullptr)
-{
-	XMMATRIX view, projection;
-	if (!GetActiveViewProjection(view, projection)) return false;
-
-	ImVec2 mouse = ImGui::GetIO().MousePos;
-	float ndcX = (mouse.x - rectMin[0]) / (rectMax[0] - rectMin[0]) * 2.0f - 1.0f;
-	float ndcY = 1.0f - (mouse.y - rectMin[1]) / (rectMax[1] - rectMin[1]) * 2.0f;
-
-	XMMATRIX viewProjection = view * projection;
-	XMMATRIX inverse = XMMatrixInverse(nullptr, viewProjection);
-	XMVECTOR nearPoint = XMVector3TransformCoord(XMVectorSet(ndcX, ndcY, 0.0f, 1.0f), inverse);
-	XMVECTOR farPoint = XMVector3TransformCoord(XMVectorSet(ndcX, ndcY, 1.0f, 1.0f), inverse);
-
-	XMStoreFloat3((XMFLOAT3*)&outOrigin, nearPoint);
-	XMStoreFloat3((XMFLOAT3*)&outDirection, XMVector3Normalize(farPoint - nearPoint));
-	if (outViewProjection) *outViewProjection = viewProjection;
-	return true;
-}
-
-//=============================================================
-// コライダーの形を囲む箱（どの形も「四角＋円柱＋丸み」を足した大きさで近似する）
-//=============================================================
-static void ColliderBounds(const ColliderShape& shape, Vector3& outMin, Vector3& outMax)
-{
-	Vector3 half(shape.HalfX + shape.RadiusXZ + shape.Radius,
-		shape.HalfY + shape.Radius,
-		shape.HalfZ + shape.RadiusXZ + shape.Radius);
-	outMin = shape.Center - half;
-	outMax = shape.Center + half;
-}
-
-//=============================================================
-// 記号のボタン（フォントに記号がなくても表示できるよう、図形で描く）
-//=============================================================
-enum class EditorIcon { Play, Pause, Stop, Move, Rotate, Scale, Local, World };
-
-static void DrawIconSymbol(ImDrawList* dl, EditorIcon icon, ImVec2 c, float r, ImU32 color);
-
-static bool IconButton(const char* id, EditorIcon icon, bool active, const char* tooltip,
-	float widthScale, float radiusScale)
-{
-	float h = ImGui::GetFrameHeight();
-
-	if (active) ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
-	bool pressed = ImGui::Button(id, ImVec2(h * widthScale, h));
-	if (active) ImGui::PopStyleColor();
-
-	if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tooltip);
-
-	ImVec2 min = ImGui::GetItemRectMin();
-	ImVec2 max = ImGui::GetItemRectMax();
-	ImVec2 center((min.x + max.x) * 0.5f, (min.y + max.y) * 0.5f);
-	DrawIconSymbol(ImGui::GetWindowDrawList(), icon, center, h * radiusScale, ImGui::GetColorU32(ImGuiCol_Text));
-	return pressed;
-}
-
-// ツールバーとギズモ切り替えでボタンと記号の大きさが少し違う
-static bool ToolbarIconButton(const char* id, EditorIcon icon, bool active, const char* tooltip)
-{
-	return IconButton(id, icon, active, tooltip, 1.4f, 0.28f);
-}
-
-static bool GizmoIconButton(const char* id, EditorIcon icon, bool active, const char* tooltip)
-{
-	return IconButton(id, icon, active, tooltip, 1.3f, 0.32f);
-}
-
-// c: 中心  r: 記号の大きさ
-static void DrawIconSymbol(ImDrawList* dl, EditorIcon icon, ImVec2 c, float r, ImU32 color)
-{
-	const float t = 1.5f;	// 線の太さ
-
-	switch (icon)
-	{
-	case EditorIcon::Play:		// ▶
-		dl->AddTriangleFilled(ImVec2(c.x - r * 0.8f, c.y - r), ImVec2(c.x - r * 0.8f, c.y + r), ImVec2(c.x + r, c.y), color);
-		break;
-	case EditorIcon::Pause:		// ❚❚
-		dl->AddRectFilled(ImVec2(c.x - r * 0.8f, c.y - r), ImVec2(c.x - r * 0.25f, c.y + r), color);
-		dl->AddRectFilled(ImVec2(c.x + r * 0.25f, c.y - r), ImVec2(c.x + r * 0.8f, c.y + r), color);
-		break;
-	case EditorIcon::Stop:		// ■
-		dl->AddRectFilled(ImVec2(c.x - r * 0.85f, c.y - r * 0.85f), ImVec2(c.x + r * 0.85f, c.y + r * 0.85f), color);
-		break;
-	case EditorIcon::Move:		// 十字の矢印
-	{
-		dl->AddLine(ImVec2(c.x - r, c.y), ImVec2(c.x + r, c.y), color, t);
-		dl->AddLine(ImVec2(c.x, c.y - r), ImVec2(c.x, c.y + r), color, t);
-		float a = r * 0.35f;
-		dl->AddTriangleFilled(ImVec2(c.x + r + 1, c.y), ImVec2(c.x + r - a, c.y - a), ImVec2(c.x + r - a, c.y + a), color);
-		dl->AddTriangleFilled(ImVec2(c.x - r - 1, c.y), ImVec2(c.x - r + a, c.y + a), ImVec2(c.x - r + a, c.y - a), color);
-		dl->AddTriangleFilled(ImVec2(c.x, c.y - r - 1), ImVec2(c.x + a, c.y - r + a), ImVec2(c.x - a, c.y - r + a), color);
-		dl->AddTriangleFilled(ImVec2(c.x, c.y + r + 1), ImVec2(c.x - a, c.y + r - a), ImVec2(c.x + a, c.y + r - a), color);
-		break;
-	}
-	case EditorIcon::Rotate:	// 回る矢印
-	{
-		dl->PathArcTo(c, r * 0.85f, XM_PI * 0.15f, XM_PI * 1.75f, 20);
-		dl->PathStroke(color, 0, t);
-		ImVec2 tip(c.x + cosf(XM_PI * 1.75f) * r * 0.85f, c.y + sinf(XM_PI * 1.75f) * r * 0.85f);
-		float a = r * 0.4f;
-		dl->AddTriangleFilled(ImVec2(tip.x + a, tip.y), ImVec2(tip.x - a * 0.3f, tip.y - a), ImVec2(tip.x - a * 0.3f, tip.y + a * 0.6f), color);
-		break;
-	}
-	case EditorIcon::Scale:		// 小さい四角から大きい四角へ伸びる
-	{
-		dl->AddRect(ImVec2(c.x - r, c.y - r), ImVec2(c.x + r, c.y + r), color, 0.0f, 0, t);
-		dl->AddRectFilled(ImVec2(c.x - r, c.y + r * 0.1f), ImVec2(c.x - r * 0.1f, c.y + r), color);
-		dl->AddLine(ImVec2(c.x - r * 0.2f, c.y + r * 0.2f), ImVec2(c.x + r * 0.7f, c.y - r * 0.7f), color, t);
-		float a = r * 0.35f;
-		dl->AddTriangleFilled(ImVec2(c.x + r * 0.85f, c.y - r * 0.85f), ImVec2(c.x + r * 0.85f - a * 1.4f, c.y - r * 0.85f), ImVec2(c.x + r * 0.85f, c.y - r * 0.85f + a * 1.4f), color);
-		break;
-	}
-	case EditorIcon::Local:		// 立方体（自分の向き）
-	{
-		float s = r * 0.7f, o = r * 0.4f;
-		dl->AddRect(ImVec2(c.x - s - o * 0.5f, c.y - s + o * 0.5f), ImVec2(c.x + s - o * 0.5f, c.y + s + o * 0.5f), color, 0.0f, 0, t);
-		dl->AddLine(ImVec2(c.x - s - o * 0.5f, c.y - s + o * 0.5f), ImVec2(c.x - s + o * 0.5f, c.y - s - o * 0.5f), color, t);
-		dl->AddLine(ImVec2(c.x + s - o * 0.5f, c.y - s + o * 0.5f), ImVec2(c.x + s + o * 0.5f, c.y - s - o * 0.5f), color, t);
-		dl->AddLine(ImVec2(c.x + s - o * 0.5f, c.y + s + o * 0.5f), ImVec2(c.x + s + o * 0.5f, c.y + s - o * 0.5f), color, t);
-		dl->AddLine(ImVec2(c.x - s + o * 0.5f, c.y - s - o * 0.5f), ImVec2(c.x + s + o * 0.5f, c.y - s - o * 0.5f), color, t);
-		dl->AddLine(ImVec2(c.x + s + o * 0.5f, c.y - s - o * 0.5f), ImVec2(c.x + s + o * 0.5f, c.y + s - o * 0.5f), color, t);
-		break;
-	}
-	case EditorIcon::World:		// 地球（円と経線・緯線）
-		dl->AddCircle(c, r, color, 20, t);
-		dl->AddLine(ImVec2(c.x - r, c.y), ImVec2(c.x + r, c.y), color, t);
-		dl->AddEllipse(c, ImVec2(r * 0.45f, r), color, 0.0f, 20, t);
-		break;
-	}
-}
-
 void EditorGUI::Draw()
 {
 	TrackUndo(false);
@@ -261,11 +137,25 @@ void EditorGUI::Draw()
 		m_RestoreSelectName.clear();
 	}
 
+	BuildDefaultLayout();
+
 	DrawToolbar();
-	DrawSceneView();
-	DrawHierarchy();
-	DrawInspector();
-	AssetBrowser::Draw();
+
+	m_SceneVisible = false;
+	m_SceneHovered = false;
+	m_SceneDrawList = nullptr;
+	if (m_ShowScene) DrawSceneView();
+
+	m_GameVisible = false;
+	m_GameHovered = false;
+	if (m_ShowGame) DrawGameView();
+
+	if (m_ShowHierarchy) DrawHierarchy();
+	if (m_ShowInspector) DrawInspector();
+	if (m_ShowProject)   AssetBrowser::Draw(&m_ShowProject);
+	if (m_ShowConsole)   Console::Draw(&m_ShowConsole);
+	DrawShortcutsWindow();
+
 	HandleShortcuts();
 
 	TrackUndo(true);
@@ -306,6 +196,11 @@ void EditorGUI::Play()
 		m_HasSnapshot = (SceneSerializer::SaveToText(m_PlaySnapshot) == 0);	// 保存できない物があれば使わない
 	}
 	UndoSystem::Cancel();
+	if (m_PlayState == PlayState::Edit)
+	{
+		Console::OnPlay();
+		m_FocusWindow = 2;	// Game タブを前に出す
+	}
 	m_PlayState = PlayState::Play;
 }
 
@@ -325,18 +220,7 @@ void EditorGUI::Stop()
 	else               Manager::ReloadScene();
 	m_HasSnapshot = false;
 	m_SelectedID = 0;
-}
-
-//=============================================================
-// 元に戻す／やり直し
-// 読み込み直しで ID が変わるので、選んでいたものは名前で選び直す（Draw の先頭で拾う）
-//=============================================================
-void EditorGUI::ApplyHistory(bool redo)
-{
-	if (GameObject* object = Manager::FindGameObjectByID(m_SelectedID)) m_RestoreSelectName = object->GetName();
-
-	if (redo ? UndoSystem::Redo() : UndoSystem::Undo()) m_SelectedID = 0;
-	else m_RestoreSelectName.clear();
+	m_FocusWindow = 1;	// Scene タブを前に出す
 }
 
 void EditorGUI::BeginRename(unsigned int id)
@@ -354,13 +238,23 @@ void EditorGUI::BeginRename(unsigned int id)
 //=============================================================
 void EditorGUI::DrawEditMenu()
 {
-	if (!ImGui::BeginMenu("編集")) return;
+	if (!ImGui::BeginMenu("Edit")) return;
 
 	bool editing = (m_PlayState != PlayState::Play);
 	bool selected = (Manager::FindGameObjectByID(m_SelectedID) != nullptr);
 
-	if (ImGui::MenuItem("元に戻す", "Ctrl+Z", false, editing && UndoSystem::CanUndo())) ApplyHistory(false);
-	if (ImGui::MenuItem("やり直し", "Ctrl+Y", false, editing && UndoSystem::CanRedo())) ApplyHistory(true);
+	if (ImGui::MenuItem("元に戻す", "Ctrl+Z", false, editing && UndoSystem::CanUndo()))
+	{
+		if (GameObject* object = Manager::FindGameObjectByID(m_SelectedID)) m_RestoreSelectName = object->GetName();
+		UndoSystem::Undo();
+		m_SelectedID = 0;
+	}
+	if (ImGui::MenuItem("やり直し", "Ctrl+Y", false, editing && UndoSystem::CanRedo()))
+	{
+		if (GameObject* object = Manager::FindGameObjectByID(m_SelectedID)) m_RestoreSelectName = object->GetName();
+		UndoSystem::Redo();
+		m_SelectedID = 0;
+	}
 	ImGui::Separator();
 	if (ImGui::MenuItem("複製", "Ctrl+D", false, selected)) m_DuplicateRequested = true;
 	if (ImGui::MenuItem("名前の変更", "F2", false, selected)) BeginRename(m_SelectedID);
@@ -401,7 +295,13 @@ void EditorGUI::HandleShortcuts()
 		// Ctrl+Z：元に戻す / Ctrl+Y・Ctrl+Shift+Z：やり直し
 		bool undo = ImGui::IsKeyPressed(ImGuiKey_Z, false) && !io.KeyShift;
 		bool redo = ImGui::IsKeyPressed(ImGuiKey_Y, false) || (ImGui::IsKeyPressed(ImGuiKey_Z, false) && io.KeyShift);
-		if (editing && (undo || redo)) ApplyHistory(!undo);	// 同じフレームに両方来たら元に戻すを優先
+		if (editing && (undo || redo))
+		{
+			if (GameObject* object = Manager::FindGameObjectByID(m_SelectedID)) m_RestoreSelectName = object->GetName();
+			bool done = undo ? UndoSystem::Undo() : UndoSystem::Redo();
+			if (done) m_SelectedID = 0;
+			else m_RestoreSelectName.clear();
+		}
 
 		// Ctrl+P：再生／停止、Ctrl+Shift+P：一時停止
 		if (ImGui::IsKeyPressed(ImGuiKey_P, false))
@@ -470,6 +370,234 @@ bool EditorGUI::ConsumeGameUpdate()
 }
 
 //=============================================================
+// 初回だけ Unity に近い配置を作る（imgui.ini に配置が保存されていればそちらを使う）
+//   ┌──────────┬───────────┬────────────┬──────────────┐
+//   │Inspector │ Hierarchy │  Project   │    Scene     │
+//   │          ├───────────┴────────────┼──────────────┤
+//   │          │        Console         │    Game      │
+//   └──────────┴────────────────────────┴──────────────┘
+//=============================================================
+void EditorGUI::BuildDefaultLayout()
+{
+	if (m_DockSpaceID == 0) return;
+
+	// 起動して最初のフレームで1回だけ調べる（自分で配置を変えたあとに勝手に戻さないため）
+	static bool firstFrame = true;
+	if (!firstFrame && !m_ResetLayout) return;
+	firstFrame = false;
+
+	ImGuiDockNode* node = ImGui::DockBuilderGetNode(m_DockSpaceID);
+	bool alreadyArranged = (node != nullptr && node->IsSplitNode());
+	if (alreadyArranged && !m_ResetLayout) return;
+	m_ResetLayout = false;
+
+	ImGuiViewport* viewport = ImGui::GetMainViewport();
+	ImGui::DockBuilderRemoveNodeChildNodes(m_DockSpaceID);
+	ImGui::DockBuilderSetNodeSize(m_DockSpaceID, viewport->WorkSize);
+
+	ImGuiID rest = m_DockSpaceID;
+	ImGuiID left   = ImGui::DockBuilderSplitNode(rest, ImGuiDir_Left, 0.20f, nullptr, &rest);
+	ImGuiID right  = ImGui::DockBuilderSplitNode(rest, ImGuiDir_Right, 0.52f, nullptr, &rest);
+	ImGuiID bottom = ImGui::DockBuilderSplitNode(rest, ImGuiDir_Down, 0.45f, nullptr, &rest);
+	ImGuiID project = ImGui::DockBuilderSplitNode(rest, ImGuiDir_Right, 0.55f, nullptr, &rest);
+	ImGuiID game   = ImGui::DockBuilderSplitNode(right, ImGuiDir_Down, 0.45f, nullptr, &right);
+
+	ImGui::DockBuilderDockWindow("Inspector", left);
+	ImGui::DockBuilderDockWindow("Hierarchy", rest);
+	ImGui::DockBuilderDockWindow("Project", project);
+	ImGui::DockBuilderDockWindow("Console", bottom);
+	ImGui::DockBuilderDockWindow("Scene", right);
+	ImGui::DockBuilderDockWindow("Game", game);
+	ImGui::DockBuilderFinish(m_DockSpaceID);
+}
+
+//=============================================================
+// オブジェクトの作成（Hierarchy の右クリックと GameObject メニューで共通）
+//=============================================================
+GameObject* EditorGUI::CreateObject(int type)
+{
+	UndoSystem::Begin();
+
+	// エディタカメラの 10m 前に置く
+	Vector3 position(0.0f, 0.0f, 0.0f);
+	if (EditorCamera::IsInitialized()) position = EditorCamera::GetPosition() + EditorCamera::GetForward() * 10.0f;
+
+	GameObject* object = nullptr;
+	switch (type)
+	{
+	case 0: object = Prefabs::CreateEmpty(position);   break;
+	case 1: object = Prefabs::CreateCube(position);    break;
+	case 2: object = Prefabs::CreateSphere(position);  break;
+	case 3: object = Prefabs::CreateCapsule(position); break;
+	case 4:
+		object = Prefabs::CreateCamera(position);
+		// エディタカメラと同じ位置・向きにしておく（今見ている景色がそのまま映る）
+		if (object && EditorCamera::IsInitialized())
+		{
+			object->SetPosition(EditorCamera::GetPosition());
+			Vector3 f = EditorCamera::GetForward();
+			object->SetRotation({ asinf(-f.y), atan2f(f.x, f.z), 0.0f });
+		}
+		break;
+	}
+	return object;
+}
+
+void EditorGUI::NewScene()
+{
+	m_PlayState = PlayState::Edit;
+	m_HasSnapshot = false;
+	m_SelectedID = 0;
+	m_ScenePath.clear();	// 名前がないので、保存のときに名前を聞く
+	UndoSystem::Clear();
+	Manager::LoadSceneText("{\"version\":1,\"objects\":[{\"id\":1,\"class\":\"GameObject\",\"name\":\"Main Camera\",\"parent\":0,\"layer\":1,"
+		"\"position\":[0,1,-10],\"rotation\":[0,0,0],\"scale\":[1,1,1],\"components\":[{\"type\":\"CameraComponent\",\"enabled\":true}]}]}");
+}
+
+//=============================================================
+// Assets / GameObject / Component / Window / Help メニュー
+//=============================================================
+void EditorGUI::DrawAssetsMenu()
+{
+	if (!ImGui::BeginMenu("Assets")) return;
+
+	if (ImGui::BeginMenu("作成"))
+	{
+		AssetBrowser::DrawCreateMenu();
+		ImGui::EndMenu();
+	}
+	if (ImGui::MenuItem("エクスプローラーで表示")) AssetBrowser::ShowInExplorer(AssetBrowser::GetCurrentFolder());
+	ImGui::Separator();
+	if (ImGui::MenuItem("更新", "Ctrl+R")) AssetBrowser::RequestRefresh();
+
+	ImGui::EndMenu();
+}
+
+void EditorGUI::DrawGameObjectMenu()
+{
+	if (!ImGui::BeginMenu("GameObject")) return;
+
+	int createType = -1;
+	if (ImGui::MenuItem("空のオブジェクト")) createType = 0;
+	if (ImGui::BeginMenu("3D オブジェクト"))
+	{
+		if (ImGui::MenuItem("四角"))     createType = 1;
+		if (ImGui::MenuItem("球"))       createType = 2;
+		if (ImGui::MenuItem("カプセル")) createType = 3;
+		ImGui::EndMenu();
+	}
+	if (ImGui::MenuItem("カメラ")) createType = 4;
+
+	GameObject* selected = Manager::FindGameObjectByID(m_SelectedID);
+	ImGui::Separator();
+	if (ImGui::MenuItem("選択中のものの子として空のオブジェクトを作成", nullptr, false, selected != nullptr))
+	{
+		if (GameObject* child = CreateObject(0))
+		{
+			child->SetParent(selected);
+			child->SetPosition({ 0.0f, 0.0f, 0.0f });
+			m_SelectedID = child->GetID();
+		}
+	}
+
+	if (createType >= 0)
+	{
+		if (GameObject* object = CreateObject(createType)) m_SelectedID = object->GetID();
+	}
+
+	ImGui::EndMenu();
+}
+
+void EditorGUI::DrawComponentMenu()
+{
+	if (!ImGui::BeginMenu("Component")) return;
+
+	GameObject* selected = Manager::FindGameObjectByID(m_SelectedID);
+	if (selected == nullptr) ImGui::TextDisabled("オブジェクトを選択してください");
+
+	for (auto& pair : ComponentRegistry::GetAll())
+	{
+		if (ImGui::MenuItem(pair.first.c_str(), nullptr, false, selected != nullptr))
+		{
+			UndoSystem::Begin();
+			selected->AddComponentInstance(pair.second(selected));
+		}
+	}
+
+	ImGui::EndMenu();
+}
+
+void EditorGUI::DrawWindowMenu()
+{
+	if (!ImGui::BeginMenu("Window")) return;
+
+	ImGui::MenuItem("Scene", nullptr, &m_ShowScene);
+	ImGui::MenuItem("Game", nullptr, &m_ShowGame);
+	ImGui::MenuItem("Hierarchy", nullptr, &m_ShowHierarchy);
+	ImGui::MenuItem("Inspector", nullptr, &m_ShowInspector);
+	ImGui::MenuItem("Project", nullptr, &m_ShowProject);
+	ImGui::MenuItem("Console", nullptr, &m_ShowConsole);
+	ImGui::Separator();
+	ImGui::MenuItem("グリッド表示", nullptr, SceneGrid::GetEnablePtr());
+	bool gizmo = Gizmo::IsEnable();
+	if (ImGui::MenuItem("ギズモ表示", "F1", &gizmo)) Gizmo::SetEnable(gizmo);
+	ImGui::Separator();
+	if (ImGui::MenuItem("レイアウトを初期状態に戻す"))
+	{
+		m_ShowScene = m_ShowGame = m_ShowHierarchy = m_ShowInspector = m_ShowProject = m_ShowConsole = true;
+		m_ResetLayout = true;
+	}
+
+	ImGui::EndMenu();
+}
+
+void EditorGUI::DrawHelpMenu()
+{
+	if (!ImGui::BeginMenu("Help")) return;
+	ImGui::MenuItem("ショートカット一覧", nullptr, &m_ShowShortcuts);
+	ImGui::Separator();
+	ImGui::TextDisabled("GM31 Engine  (DirectX11 / Dear ImGui %s)", IMGUI_VERSION);
+	ImGui::EndMenu();
+}
+
+void EditorGUI::DrawShortcutsWindow()
+{
+	if (!m_ShowShortcuts) return;
+
+	ImGui::SetNextWindowSize(ImVec2(420.0f, 0.0f), ImGuiCond_FirstUseEver);
+	if (ImGui::Begin("ショートカット一覧", &m_ShowShortcuts, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		static const char* list[][2] = {
+			{ "Ctrl+S", "シーンを保存" },
+			{ "Ctrl+Z / Ctrl+Y", "元に戻す / やり直し" },
+			{ "Ctrl+D", "複製" },
+			{ "Delete", "削除" },
+			{ "F2", "名前の変更" },
+			{ "F", "選択中のオブジェクトに寄る" },
+			{ "W / E / R", "移動 / 回転 / 拡縮" },
+			{ "Ctrl+P", "再生・停止" },
+			{ "Ctrl+Shift+P", "一時停止" },
+			{ "F1", "ギズモ表示" },
+			{ "右ドラッグ + WASD/QE", "Scene のカメラ移動" },
+			{ "Ctrl+ホイール", "Project のアイコンの大きさ" },
+			{ "Ctrl+R", "Project を更新" },
+			{ "Alt+Ctrl+C", "アセットのパスをコピー" },
+		};
+		if (ImGui::BeginTable("##shortcuts", 2, ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerV))
+		{
+			for (auto& row : list)
+			{
+				ImGui::TableNextRow();
+				ImGui::TableSetColumnIndex(0); ImGui::TextUnformatted(row[0]);
+				ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted(row[1]);
+			}
+			ImGui::EndTable();
+		}
+	}
+	ImGui::End();
+}
+
+//=============================================================
 // ファイルメニュー（シーンの保存・読み込み）
 //=============================================================
 void EditorGUI::SaveScene(const std::string& path)
@@ -480,7 +608,11 @@ void EditorGUI::SaveScene(const std::string& path)
 	if (skipped >= 0) m_ScenePath = path;
 	if (skipped > 0)
 	{
-		OutputDebugStringA("[Scene] 登録されていないオブジェクトは保存されていません（出力ウィンドウを確認）\n");
+		Debug::LogWarning("登録されていないオブジェクト %d 個は保存されていません", skipped);
+	}
+	else if (skipped == 0)
+	{
+		Debug::Log("シーンを保存しました: %s", path.c_str());
 	}
 }
 
@@ -492,17 +624,23 @@ void EditorGUI::DrawFileMenu()
 	bool canSave = (m_PlayState == PlayState::Edit);
 	if (canSave && io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_S, false) && !io.WantTextInput)
 	{
-		SaveScene(m_ScenePath);
+		// まだ名前がないシーンは「名前を付けて保存」
+		if (m_ScenePath.empty()) { strncpy_s(m_SaveAsBuffer, "NewScene", _TRUNCATE); m_OpenSaveAsPopup = true; }
+		else SaveScene(m_ScenePath);
 	}
 
-	if (ImGui::BeginMenu("ファイル"))
+	if (ImGui::BeginMenu("File"))
 	{
-		ImGui::TextDisabled("%s", m_ScenePath.c_str());
+		ImGui::TextDisabled("%s", m_ScenePath.empty() ? "(保存していないシーン)" : m_ScenePath.c_str());
+		ImGui::Separator();
+
+		if (ImGui::MenuItem("新規シーン", nullptr, false, canSave)) NewScene();
 		ImGui::Separator();
 
 		if (ImGui::MenuItem("シーンを保存", "Ctrl+S", false, canSave))
 		{
-			SaveScene(m_ScenePath);
+			if (m_ScenePath.empty()) { strncpy_s(m_SaveAsBuffer, "NewScene", _TRUNCATE); m_OpenSaveAsPopup = true; }
+			else SaveScene(m_ScenePath);
 		}
 
 		if (ImGui::MenuItem("名前を付けて保存...", nullptr, false, canSave))
@@ -534,6 +672,9 @@ void EditorGUI::DrawFileMenu()
 			if (!any) ImGui::TextDisabled("asset\\scene に .json がありません");
 			ImGui::EndMenu();
 		}
+
+		ImGui::Separator();
+		if (ImGui::MenuItem("終了")) PostMessage(GetWindow(), WM_CLOSE, 0, 0);
 
 		ImGui::EndMenu();
 	}
@@ -585,6 +726,48 @@ void EditorGUI::DrawToolbar()
 
 	DrawFileMenu();
 	DrawEditMenu();
+	DrawAssetsMenu();
+	DrawGameObjectMenu();
+	DrawComponentMenu();
+	DrawWindowMenu();
+	DrawHelpMenu();
+
+	enum class Icon { Play, Pause, Stop };
+
+	// 記号のボタン（フォントに記号がなくても表示できるよう、図形で描く）
+	auto iconButton = [](const char* id, Icon icon, bool active, const char* tooltip) -> bool
+	{
+		float h = ImGui::GetFrameHeight();
+		ImVec2 size(h * 1.4f, h);
+
+		if (active) ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+		bool pressed = ImGui::Button(id, size);
+		if (active) ImGui::PopStyleColor();
+
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tooltip);
+
+		ImVec2 min = ImGui::GetItemRectMin();
+		ImVec2 max = ImGui::GetItemRectMax();
+		ImVec2 c((min.x + max.x) * 0.5f, (min.y + max.y) * 0.5f);
+		float r = h * 0.28f;	// 記号の大きさ
+		ImU32 color = ImGui::GetColorU32(ImGuiCol_Text);
+		ImDrawList* dl = ImGui::GetWindowDrawList();
+
+		switch (icon)
+		{
+		case Icon::Play:	// ▶
+			dl->AddTriangleFilled(ImVec2(c.x - r * 0.8f, c.y - r), ImVec2(c.x - r * 0.8f, c.y + r), ImVec2(c.x + r, c.y), color);
+			break;
+		case Icon::Pause:	// ❚❚
+			dl->AddRectFilled(ImVec2(c.x - r * 0.8f, c.y - r), ImVec2(c.x - r * 0.25f, c.y + r), color);
+			dl->AddRectFilled(ImVec2(c.x + r * 0.25f, c.y - r), ImVec2(c.x + r * 0.8f, c.y + r), color);
+			break;
+		case Icon::Stop:	// ■
+			dl->AddRectFilled(ImVec2(c.x - r * 0.85f, c.y - r * 0.85f), ImVec2(c.x + r * 0.85f, c.y + r * 0.85f), color);
+			break;
+		}
+		return pressed;
+	};
 
 	// Unity のように中央に並べる
 	float h = ImGui::GetFrameHeight();
@@ -592,19 +775,19 @@ void EditorGUI::DrawToolbar()
 	ImGui::SetCursorPosX((ImGui::GetWindowWidth() - groupWidth) * 0.5f);
 
 	// ▶：止まっていれば再生。Play 中は押しても何もしない
-	if (ToolbarIconButton("##Play", EditorIcon::Play, m_PlayState == PlayState::Play, "再生 (Ctrl+P)"))
+	if (iconButton("##Play", Icon::Play, m_PlayState == PlayState::Play, "再生 (Ctrl+P)"))
 	{
 		if (m_PlayState != PlayState::Play) Play();
 	}
 
 	// ❚❚：Play 中なら一時停止、一時停止中なら再開
-	if (ToolbarIconButton("##Pause", EditorIcon::Pause, m_PlayState == PlayState::Pause, "一時停止 (Ctrl+Shift+P)"))
+	if (iconButton("##Pause", Icon::Pause, m_PlayState == PlayState::Pause, "一時停止 (Ctrl+Shift+P)"))
 	{
 		TogglePause();
 	}
 
 	// ■：シーンを読み込み直して最初の状態に戻す（読み込み後の1フレーム更新は Manager 側で行う）
-	if (ToolbarIconButton("##Stop", EditorIcon::Stop, false, "停止・最初の状態に戻す (Ctrl+P)"))
+	if (iconButton("##Stop", Icon::Stop, false, "停止・最初の状態に戻す (Ctrl+P)"))
 	{
 		Stop();
 	}
@@ -625,12 +808,76 @@ void EditorGUI::DrawToolbar()
 // シーンビュー
 //=============================================================
 //=============================================================
+// Game ビュー（ゲームのカメラで映した画面。Play 中はここでゲームを操作する）
+//=============================================================
+void EditorGUI::DrawGameView()
+{
+	if (m_FocusWindow == 2) { ImGui::SetNextWindowFocus(); m_FocusWindow = 0; }
+
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+	bool visible = ImGui::Begin("Game", &m_ShowGame, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+	ImGui::PopStyleVar();
+	m_GameVisible = visible;
+
+	if (visible)
+	{
+		ImGui::SetCursorPos(ImVec2(ImGui::GetCursorPosX() + 6.0f, ImGui::GetCursorPosY() + 3.0f));
+		ImGui::TextDisabled("16:9  %d x %d", SCREEN_WIDTH, SCREEN_HEIGHT);
+		if (CameraComponent* camera = CameraComponent::GetMain())
+		{
+			ImGui::SameLine();
+			ImGui::TextDisabled("|  Camera: %s", camera->GetGameObject()->GetName().c_str());
+		}
+
+		ImVec2 avail = ImGui::GetContentRegionAvail();
+		float aspect = (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT;
+		ImVec2 size(avail.x, avail.x / aspect);
+		if (size.y > avail.y) size = ImVec2(avail.y * aspect, avail.y);
+		if (size.x < 1.0f || size.y < 1.0f) size = ImVec2(1.0f, 1.0f);
+
+		ImVec2 origin = ImGui::GetCursorScreenPos();
+		ImVec2 min(origin.x + (avail.x - size.x) * 0.5f, origin.y + (avail.y - size.y) * 0.5f);
+		ImVec2 max(min.x + size.x, min.y + size.y);
+
+		// 余白は黒（レターボックス）
+		ImDrawList* dl = ImGui::GetWindowDrawList();
+		dl->AddRectFilled(origin, ImVec2(origin.x + avail.x, origin.y + avail.y), IM_COL32(20, 20, 22, 255));
+		dl->AddImage((ImTextureID)(intptr_t)Renderer::GetViewTexture(Renderer::VIEW_GAME), min, max);
+
+		// クリックでウィンドウが動かないよう、見えないボタンを置く
+		ImGui::SetCursorScreenPos(min);
+		ImGui::InvisibleButton("##GameImage", size, ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight);
+		m_GameHovered = ImGui::IsItemHovered();
+
+		if (m_PlayState != PlayState::Play)
+		{
+			const char* text = "▶ で再生すると、ここでゲームを操作できます";
+			ImVec2 textSize = ImGui::CalcTextSize(text);
+			dl->AddText(ImVec2(min.x + (size.x - textSize.x) * 0.5f, max.y - textSize.y - 8.0f), IM_COL32(255, 255, 255, 160), text);
+		}
+	}
+	ImGui::End();
+}
+
+//=============================================================
 // ドロップした場所（マウスから伸ばした光線が地面と交わる点。地面がなければカメラの前）
 //=============================================================
 Vector3 EditorGUI::GetDropPosition()
 {
+	XMMATRIX view, projection;
+	if (!GetActiveViewProjection(view, projection)) return Vector3(0.0f, 0.0f, 0.0f);
+
+	ImVec2 mouse = ImGui::GetIO().MousePos;
+	float ndcX = (mouse.x - m_SceneMin[0]) / (m_SceneMax[0] - m_SceneMin[0]) * 2.0f - 1.0f;
+	float ndcY = 1.0f - (mouse.y - m_SceneMin[1]) / (m_SceneMax[1] - m_SceneMin[1]) * 2.0f;
+
+	XMMATRIX inverse = XMMatrixInverse(nullptr, view * projection);
+	XMVECTOR nearPoint = XMVector3TransformCoord(XMVectorSet(ndcX, ndcY, 0.0f, 1.0f), inverse);
+	XMVECTOR farPoint = XMVector3TransformCoord(XMVectorSet(ndcX, ndcY, 1.0f, 1.0f), inverse);
+
 	Vector3 origin, direction;
-	if (!ScreenRayFromMouse(m_SceneMin, m_SceneMax, origin, direction)) return Vector3(0.0f, 0.0f, 0.0f);
+	XMStoreFloat3((XMFLOAT3*)&origin, nearPoint);
+	XMStoreFloat3((XMFLOAT3*)&direction, XMVector3Normalize(farPoint - nearPoint));
 
 	MeshField* field = Manager::GetGameObject<MeshField>();
 
@@ -654,15 +901,15 @@ Vector3 EditorGUI::GetDropPosition()
 
 void EditorGUI::DrawSceneView()
 {
-	m_SceneHovered = false;
-	m_SceneDrawList = nullptr;
+	if (m_FocusWindow == 1) { ImGui::SetNextWindowFocus(); m_FocusWindow = 0; }
 
 	// ギズモを掴んでいる間はウィンドウが動かないようにする（前のフレームの状態で判定）
 	ImGuiWindowFlags flags = m_GizmoActive ? ImGuiWindowFlags_NoMove : 0;
 	m_GizmoActive = false;
 
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-	bool visible = ImGui::Begin("Scene", nullptr, flags);
+	bool visible = ImGui::Begin("Scene", &m_ShowScene, flags);
+	m_SceneVisible = visible;
 	ImGui::PopStyleVar();
 
 	if (visible)
@@ -698,9 +945,9 @@ void EditorGUI::DrawSceneView()
 		ImGuiIO& io = ImGui::GetIO();
 		if (m_SceneHovered && !ImGui::IsMouseDown(ImGuiMouseButton_Right) && !io.WantTextInput)
 		{
-			if (ImGui::IsKeyPressed(ImGuiKey_W, false)) m_GizmoOperation = GizmoOperation::Translate;
-			if (ImGui::IsKeyPressed(ImGuiKey_E, false)) m_GizmoOperation = GizmoOperation::Rotate;
-			if (ImGui::IsKeyPressed(ImGuiKey_R, false)) m_GizmoOperation = GizmoOperation::Scale;
+			if (ImGui::IsKeyPressed(ImGuiKey_W, false)) m_GizmoOperation = 0;
+			if (ImGui::IsKeyPressed(ImGuiKey_E, false)) m_GizmoOperation = 1;
+			if (ImGui::IsKeyPressed(ImGuiKey_R, false)) m_GizmoOperation = 2;
 			if (ImGui::IsKeyPressed(ImGuiKey_F, false)) FocusObject(m_SelectedID);	// F: 選択中のものに寄る
 		}
 
@@ -757,21 +1004,124 @@ void EditorGUI::DrawSceneView()
 //=============================================================
 void EditorGUI::DrawGizmoToolbar()
 {
-	if (GizmoIconButton("##Move", EditorIcon::Move, m_GizmoOperation == GizmoOperation::Translate, "移動 (W)"))
-		m_GizmoOperation = GizmoOperation::Translate;
+	enum class Icon { Move, Rotate, Scale, Local, World };
+
+	auto iconButton = [](const char* id, Icon icon, bool active, const char* tooltip) -> bool
+	{
+		float h = ImGui::GetFrameHeight();
+		ImVec2 size(h * 1.3f, h);
+
+		if (active) ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+		bool pressed = ImGui::Button(id, size);
+		if (active) ImGui::PopStyleColor();
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tooltip);
+
+		ImVec2 min = ImGui::GetItemRectMin();
+		ImVec2 max = ImGui::GetItemRectMax();
+		ImVec2 c((min.x + max.x) * 0.5f, (min.y + max.y) * 0.5f);
+		float r = h * 0.32f;
+		ImU32 color = ImGui::GetColorU32(ImGuiCol_Text);
+		ImDrawList* dl = ImGui::GetWindowDrawList();
+		const float t = 1.5f;	// 線の太さ
+
+		switch (icon)
+		{
+		case Icon::Move:	// 十字の矢印
+		{
+			dl->AddLine(ImVec2(c.x - r, c.y), ImVec2(c.x + r, c.y), color, t);
+			dl->AddLine(ImVec2(c.x, c.y - r), ImVec2(c.x, c.y + r), color, t);
+			float a = r * 0.35f;
+			dl->AddTriangleFilled(ImVec2(c.x + r + 1, c.y), ImVec2(c.x + r - a, c.y - a), ImVec2(c.x + r - a, c.y + a), color);
+			dl->AddTriangleFilled(ImVec2(c.x - r - 1, c.y), ImVec2(c.x - r + a, c.y + a), ImVec2(c.x - r + a, c.y - a), color);
+			dl->AddTriangleFilled(ImVec2(c.x, c.y - r - 1), ImVec2(c.x + a, c.y - r + a), ImVec2(c.x - a, c.y - r + a), color);
+			dl->AddTriangleFilled(ImVec2(c.x, c.y + r + 1), ImVec2(c.x - a, c.y + r - a), ImVec2(c.x + a, c.y + r - a), color);
+			break;
+		}
+		case Icon::Rotate:	// 回る矢印
+		{
+			dl->PathArcTo(c, r * 0.85f, XM_PI * 0.15f, XM_PI * 1.75f, 20);
+			dl->PathStroke(color, 0, t);
+			ImVec2 tip(c.x + cosf(XM_PI * 1.75f) * r * 0.85f, c.y + sinf(XM_PI * 1.75f) * r * 0.85f);
+			float a = r * 0.4f;
+			dl->AddTriangleFilled(ImVec2(tip.x + a, tip.y), ImVec2(tip.x - a * 0.3f, tip.y - a), ImVec2(tip.x - a * 0.3f, tip.y + a * 0.6f), color);
+			break;
+		}
+		case Icon::Scale:	// 小さい四角から大きい四角へ伸びる
+		{
+			dl->AddRect(ImVec2(c.x - r, c.y - r), ImVec2(c.x + r, c.y + r), color, 0.0f, 0, t);
+			dl->AddRectFilled(ImVec2(c.x - r, c.y + r * 0.1f), ImVec2(c.x - r * 0.1f, c.y + r), color);
+			dl->AddLine(ImVec2(c.x - r * 0.2f, c.y + r * 0.2f), ImVec2(c.x + r * 0.7f, c.y - r * 0.7f), color, t);
+			float a = r * 0.35f;
+			dl->AddTriangleFilled(ImVec2(c.x + r * 0.85f, c.y - r * 0.85f), ImVec2(c.x + r * 0.85f - a * 1.4f, c.y - r * 0.85f), ImVec2(c.x + r * 0.85f, c.y - r * 0.85f + a * 1.4f), color);
+			break;
+		}
+		case Icon::Local:	// 立方体（自分の向き）
+		{
+			float s = r * 0.7f, o = r * 0.4f;
+			dl->AddRect(ImVec2(c.x - s - o * 0.5f, c.y - s + o * 0.5f), ImVec2(c.x + s - o * 0.5f, c.y + s + o * 0.5f), color, 0.0f, 0, t);
+			dl->AddLine(ImVec2(c.x - s - o * 0.5f, c.y - s + o * 0.5f), ImVec2(c.x - s + o * 0.5f, c.y - s - o * 0.5f), color, t);
+			dl->AddLine(ImVec2(c.x + s - o * 0.5f, c.y - s + o * 0.5f), ImVec2(c.x + s + o * 0.5f, c.y - s - o * 0.5f), color, t);
+			dl->AddLine(ImVec2(c.x + s - o * 0.5f, c.y + s + o * 0.5f), ImVec2(c.x + s + o * 0.5f, c.y + s - o * 0.5f), color, t);
+			dl->AddLine(ImVec2(c.x - s + o * 0.5f, c.y - s - o * 0.5f), ImVec2(c.x + s + o * 0.5f, c.y - s - o * 0.5f), color, t);
+			dl->AddLine(ImVec2(c.x + s + o * 0.5f, c.y - s - o * 0.5f), ImVec2(c.x + s + o * 0.5f, c.y + s - o * 0.5f), color, t);
+			break;
+		}
+		case Icon::World:	// 地球（円と経線・緯線）
+		{
+			dl->AddCircle(c, r, color, 20, t);
+			dl->AddLine(ImVec2(c.x - r, c.y), ImVec2(c.x + r, c.y), color, t);
+			dl->AddEllipse(c, ImVec2(r * 0.45f, r), color, 0.0f, 20, t);
+			break;
+		}
+		}
+		return pressed;
+	};
+
+	if (iconButton("##Move", Icon::Move, m_GizmoOperation == 0, "移動 (W)"))   m_GizmoOperation = 0;
 	ImGui::SameLine();
-	if (GizmoIconButton("##Rotate", EditorIcon::Rotate, m_GizmoOperation == GizmoOperation::Rotate, "回転 (E)"))
-		m_GizmoOperation = GizmoOperation::Rotate;
+	if (iconButton("##Rotate", Icon::Rotate, m_GizmoOperation == 1, "回転 (E)")) m_GizmoOperation = 1;
 	ImGui::SameLine();
-	if (GizmoIconButton("##Scale", EditorIcon::Scale, m_GizmoOperation == GizmoOperation::Scale, "拡縮 (R)"))
-		m_GizmoOperation = GizmoOperation::Scale;
+	if (iconButton("##Scale", Icon::Scale, m_GizmoOperation == 2, "拡縮 (R)"))  m_GizmoOperation = 2;
 	ImGui::SameLine();
 	ImGui::TextDisabled("|");
 	ImGui::SameLine();
-	if (GizmoIconButton("##Space", m_GizmoLocal ? EditorIcon::Local : EditorIcon::World, false,
+	if (iconButton("##Space", m_GizmoLocal ? Icon::Local : Icon::World, false,
 		m_GizmoLocal ? "ローカル座標（押すとワールド座標）" : "ワールド座標（押すとローカル座標）"))
 	{
 		m_GizmoLocal = !m_GizmoLocal;
+	}
+
+	// グリッドの表示切り替え（井桁のアイコン）
+	ImGui::SameLine();
+	ImGui::TextDisabled("|");
+	ImGui::SameLine();
+	{
+		float h = ImGui::GetFrameHeight();
+		bool on = SceneGrid::IsEnable();
+		if (on) ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+		if (ImGui::Button("##Grid", ImVec2(h * 1.3f, h))) SceneGrid::SetEnable(!on);
+		if (on) ImGui::PopStyleColor();
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("グリッド");
+		ImVec2 min = ImGui::GetItemRectMin(), max = ImGui::GetItemRectMax();
+		ImVec2 c((min.x + max.x) * 0.5f, (min.y + max.y) * 0.5f);
+		float r = h * 0.3f;
+		ImU32 color = ImGui::GetColorU32(ImGuiCol_Text);
+		ImDrawList* dl = ImGui::GetWindowDrawList();
+		for (int i = -1; i <= 1; i += 2)
+		{
+			dl->AddLine(ImVec2(c.x + r * 0.4f * i, c.y - r), ImVec2(c.x + r * 0.4f * i, c.y + r), color, 1.5f);
+			dl->AddLine(ImVec2(c.x - r, c.y + r * 0.4f * i), ImVec2(c.x + r, c.y + r * 0.4f * i), color, 1.5f);
+		}
+	}
+
+	// ギズモ（コライダーの線など）の表示切り替え
+	ImGui::SameLine();
+	{
+		bool on = Gizmo::IsEnable();
+		if (on) ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+		if (ImGui::Button("Gizmos")) Gizmo::SetEnable(!on);
+		if (on) ImGui::PopStyleColor();
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("コライダーやカメラの線 (F1)");
 	}
 }
 
@@ -782,7 +1132,7 @@ void EditorGUI::DrawTransformGizmo()
 {
 	GameObject* object = Manager::FindGameObjectByID(m_SelectedID);
 	if (object == nullptr) return;
-	if (object->GetLayer() == LAYER_2D) return;	// 2D のオブジェクトは対象外
+	if (object->GetLayer() == 3) return;	// 2D のオブジェクトは対象外
 
 	XMMATRIX view, projection;
 	if (!GetActiveViewProjection(view, projection)) return;
@@ -796,15 +1146,14 @@ void EditorGUI::DrawTransformGizmo()
 	ImGuizmo::SetDrawlist(m_SceneDrawList);
 	ImGuizmo::SetRect(m_SceneMin[0], m_SceneMin[1], m_SceneMax[0] - m_SceneMin[0], m_SceneMax[1] - m_SceneMin[1]);
 
-	// Ctrl を押している間はスナップ（移動 1m / 回転 15度 / 拡縮 0.1）
 	ImGuizmo::OPERATION operation = ImGuizmo::TRANSLATE;
+	if (m_GizmoOperation == 1) operation = ImGuizmo::ROTATE;
+	if (m_GizmoOperation == 2) operation = ImGuizmo::SCALE;
+
+	// Ctrl を押している間はスナップ（移動 1m / 回転 15度 / 拡縮 0.1）
 	float snap[3] = { 1.0f, 1.0f, 1.0f };
-	switch (m_GizmoOperation)
-	{
-	case GizmoOperation::Translate: operation = ImGuizmo::TRANSLATE; break;
-	case GizmoOperation::Rotate:    operation = ImGuizmo::ROTATE; snap[0] = 15.0f; break;
-	case GizmoOperation::Scale:     operation = ImGuizmo::SCALE;  snap[0] = snap[1] = snap[2] = 0.1f; break;
-	}
+	if (m_GizmoOperation == 1) snap[0] = 15.0f;
+	if (m_GizmoOperation == 2) snap[0] = snap[1] = snap[2] = 0.1f;
 	bool useSnap = ImGui::GetIO().KeyCtrl;
 
 	bool changed = ImGuizmo::Manipulate(&viewF._11, &projectionF._11, operation,
@@ -828,10 +1177,9 @@ void EditorGUI::DrawTransformGizmo()
 	XMStoreFloat3((XMFLOAT3*)&position, translation);
 	XMStoreFloat3((XMFLOAT3*)&scaleValue, scale);
 
-	// 回転・拡縮以外では書き換えない（誤差で数値の表記が変わるのを防ぐ）
 	object->SetPosition(position);
-	if (m_GizmoOperation == GizmoOperation::Rotate) object->SetRotation(RotationFromQuaternion(rotation));
-	if (m_GizmoOperation == GizmoOperation::Scale)  object->SetScale(scaleValue);
+	if (m_GizmoOperation == 1) object->SetRotation(RotationFromQuaternion(rotation));	// 回転以外では回転を書き換えない（誤差で角度の表記が変わるのを防ぐ）
+	if (m_GizmoOperation == 2) object->SetScale(scaleValue);
 }
 
 //=============================================================
@@ -841,13 +1189,23 @@ void EditorGUI::DrawTransformGizmo()
 //=============================================================
 void EditorGUI::PickObject()
 {
-	Vector3  origin, direction;
-	XMMATRIX viewProjection;
-	if (!ScreenRayFromMouse(m_SceneMin, m_SceneMax, origin, direction, &viewProjection)) return;
+	XMMATRIX view, projection;
+	if (!GetActiveViewProjection(view, projection)) return;
 
 	ImVec2 mouse = ImGui::GetIO().MousePos;
 	float width = m_SceneMax[0] - m_SceneMin[0];
 	float height = m_SceneMax[1] - m_SceneMin[1];
+	float ndcX = (mouse.x - m_SceneMin[0]) / width * 2.0f - 1.0f;
+	float ndcY = 1.0f - (mouse.y - m_SceneMin[1]) / height * 2.0f;
+
+	XMMATRIX viewProjection = view * projection;
+	XMMATRIX inverse = XMMatrixInverse(nullptr, viewProjection);
+	XMVECTOR nearPoint = XMVector3TransformCoord(XMVectorSet(ndcX, ndcY, 0.0f, 1.0f), inverse);
+	XMVECTOR farPoint = XMVector3TransformCoord(XMVectorSet(ndcX, ndcY, 1.0f, 1.0f), inverse);
+
+	XMFLOAT3 origin, direction;
+	XMStoreFloat3(&origin, nearPoint);
+	XMStoreFloat3(&direction, XMVector3Normalize(farPoint - nearPoint));
 
 	unsigned int bestID = 0;
 	float bestDistance = FLT_MAX;
@@ -862,27 +1220,30 @@ void EditorGUI::PickObject()
 			Collider* collider = dynamic_cast<Collider*>(component);
 			if (collider == nullptr || !collider->IsEnabled()) continue;
 
-			Vector3 boundsMin, boundsMax;
-			ColliderBounds(collider->GetShape(), boundsMin, boundsMax);
-
-			const float* lo = &boundsMin.x;
-			const float* hi = &boundsMax.x;
-			const float* o = &origin.x;
-			const float* d = &direction.x;
+			ColliderShape shape = collider->GetShape();
+			float half[3] = {
+				shape.HalfX + shape.RadiusXZ + shape.Radius,
+				shape.HalfY + shape.Radius,
+				shape.HalfZ + shape.RadiusXZ + shape.Radius };
+			float center[3] = { shape.Center.x, shape.Center.y, shape.Center.z };
+			float o[3] = { origin.x, origin.y, origin.z };
+			float d[3] = { direction.x, direction.y, direction.z };
 
 			// スラブ法で光線と箱の交差を調べる
 			float tMin = 0.0f, tMax = FLT_MAX;
 			bool hit = true;
 			for (int axis = 0; axis < 3; axis++)
 			{
+				float lo = center[axis] - half[axis];
+				float hi = center[axis] + half[axis];
 				if (fabsf(d[axis]) < 1e-6f)
 				{
-					if (o[axis] < lo[axis] || o[axis] > hi[axis]) { hit = false; break; }
+					if (o[axis] < lo || o[axis] > hi) { hit = false; break; }
 				}
 				else
 				{
-					float t1 = (lo[axis] - o[axis]) / d[axis];
-					float t2 = (hi[axis] - o[axis]) / d[axis];
+					float t1 = (lo - o[axis]) / d[axis];
+					float t2 = (hi - o[axis]) / d[axis];
 					if (t1 > t2) { float tmp = t1; t1 = t2; t2 = tmp; }
 					if (t1 > tMin) tMin = t1;
 					if (t2 < tMax) tMax = t2;
@@ -904,7 +1265,7 @@ void EditorGUI::PickObject()
 		float bestPixels = 25.0f;
 		for (GameObject* object : Manager::GetAllGameObjects())
 		{
-			if (object->IsDestroyed() || object->GetLayer() == LAYER_2D) continue;
+			if (object->IsDestroyed() || object->GetLayer() == 3) continue;
 
 			Vector3 p = object->GetWorldPosition();
 			XMVECTOR clip = XMVector4Transform(XMVectorSet(p.x, p.y, p.z, 1.0f), viewProjection);
@@ -928,27 +1289,9 @@ void EditorGUI::PickObject()
 //=============================================================
 // Hierarchy
 //=============================================================
-// 空いている場所を右クリックしたときに作れるもの
-struct CreateMenuItem
-{
-	const char* Label;
-	GameObject* (*Create)(const Vector3&);
-	bool        SeparatorBefore;	// この項目の前に区切り線を引く
-	bool        MatchEditorCamera;	// エディタカメラと同じ位置・向きにする
-};
-
-static const CreateMenuItem CREATE_MENU[] =
-{
-	{ "空のオブジェクト", Prefabs::CreateEmpty,   false, false },
-	{ "四角",             Prefabs::CreateCube,    true,  false },
-	{ "球",               Prefabs::CreateSphere,  false, false },
-	{ "カプセル",         Prefabs::CreateCapsule, false, false },
-	{ "カメラ",           Prefabs::CreateCamera,  true,  true  },
-};
-
 void EditorGUI::DrawHierarchy()
 {
-	ImGui::Begin("Hierarchy");
+	ImGui::Begin("Hierarchy", &m_ShowHierarchy);
 
 	m_HasDrop = false;
 
@@ -967,14 +1310,16 @@ void EditorGUI::DrawHierarchy()
 	ImGui::InvisibleButton("##HierarchyEmpty", rest);
 
 	// 空いている場所を右クリック：オブジェクトを作る
-	const CreateMenuItem* create = nullptr;
+	int createType = -1;	// 0:空 1:四角 2:球 3:カプセル 4:カメラ
 	if (ImGui::BeginPopupContextItem("##HierarchyContext"))
 	{
-		for (const CreateMenuItem& item : CREATE_MENU)
-		{
-			if (item.SeparatorBefore) ImGui::Separator();
-			if (ImGui::MenuItem(item.Label)) create = &item;
-		}
+		if (ImGui::MenuItem("空のオブジェクト")) createType = 0;
+		ImGui::Separator();
+		if (ImGui::MenuItem("四角"))       createType = 1;
+		if (ImGui::MenuItem("球"))         createType = 2;
+		if (ImGui::MenuItem("カプセル"))   createType = 3;
+		ImGui::Separator();
+		if (ImGui::MenuItem("カメラ"))     createType = 4;
 		ImGui::EndPopup();
 	}
 
@@ -997,23 +1342,9 @@ void EditorGUI::DrawHierarchy()
 		m_HasDrop = false;
 	}
 
-	if (create)
+	if (createType >= 0)
 	{
-		// エディタカメラの 10m 前に置く
-		Vector3 position(0.0f, 0.0f, 0.0f);
-		if (EditorCamera::IsInitialized()) position = EditorCamera::GetPosition() + EditorCamera::GetForward() * 10.0f;
-
-		GameObject* object = create->Create(position);
-
-		// カメラはエディタカメラにぴったり重ねる（今見ている景色がそのまま映る）
-		if (object && create->MatchEditorCamera && EditorCamera::IsInitialized())
-		{
-			object->SetPosition(EditorCamera::GetPosition());
-			Vector3 f = EditorCamera::GetForward();
-			object->SetRotation({ asinf(-f.y), atan2f(f.x, f.z), 0.0f });
-		}
-
-		if (object) m_SelectedID = object->GetID();
+		if (GameObject* object = CreateObject(createType)) m_SelectedID = object->GetID();
 	}
 
 	ImGui::End();
@@ -1114,7 +1445,7 @@ void EditorGUI::DrawNode(GameObject* object)
 //=============================================================
 void EditorGUI::DrawInspector()
 {
-	ImGui::Begin("Inspector");
+	ImGui::Begin("Inspector", &m_ShowInspector);
 
 	GameObject* object = Manager::FindGameObjectByID(m_SelectedID);
 	if (object == nullptr)
@@ -1173,8 +1504,17 @@ void EditorGUI::DrawInspector()
 		bool open = ImGui::CollapsingHeader(label.c_str(), ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_AllowOverlap);
 
 		// 見出しの右クリック、または右端の「…」ボタンでメニュー
+		// 見出しをダブルクリック：スクリプトを Visual Studio で開く
+		std::string sourceFile = ScriptTool::FindSourceFile(label);
+		if (!sourceFile.empty() && ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+		{
+			ScriptTool::OpenInEditor(sourceFile);
+		}
+
 		if (ImGui::BeginPopupContextItem("ComponentMenu"))
 		{
+			if (ImGui::MenuItem("スクリプトを編集", nullptr, false, !sourceFile.empty())) ScriptTool::OpenInEditor(sourceFile);
+			ImGui::Separator();
 			if (ImGui::MenuItem("コンポーネントを削除")) removeComponent = component;
 			ImGui::EndPopup();
 		}
@@ -1197,18 +1537,85 @@ void EditorGUI::DrawInspector()
 	// コンポーネントを追加（登録されているものを一覧から選ぶ）
 	ImGui::Separator();
 	if (ImGui::Button("Add Component", ImVec2(-1.0f, 0.0f))) ImGui::OpenPopup("AddComponentPopup");
+
+	// Project の Scripts からスクリプトをドロップしても追加できる
+	std::string droppedScript;
+	if (AssetBrowser::AcceptDrop(AssetBrowser::AssetType::Script, droppedScript))
+	{
+		std::string typeName = AssetBrowser::GetStem(droppedScript);
+		Component* component = ComponentRegistry::Create(typeName, object);
+		if (component)
+		{
+			UndoSystem::Begin();
+			object->AddComponentInstance(component);
+		}
+		else
+		{
+			Debug::LogWarning("%s はまだ登録されていません。ビルドし直してから追加してください", typeName.c_str());
+		}
+	}
 	if (ImGui::BeginPopup("AddComponentPopup"))
 	{
+		// 検索欄（開いたらすぐ入力できるようにする）
+		static char search[64] = "";
+		if (ImGui::IsWindowAppearing())
+		{
+			search[0] = '\0';
+			ImGui::SetKeyboardFocusHere();
+		}
+		ImGui::SetNextItemWidth(260.0f);
+		bool enter = ImGui::InputTextWithHint("##ComponentSearch", "検索", search, sizeof(search), ImGuiInputTextFlags_EnterReturnsTrue);
+
+		// 大文字・小文字を区別せずに、名前の一部が合うものを出す
+		auto lower = [](std::string s) { for (char& c : s) c = (char)tolower((unsigned char)c); return s; };
+		std::string keyword = lower(search);
+
+		ImGui::Separator();
+		ImGui::BeginChild("##ComponentList", ImVec2(260.0f, 240.0f), ImGuiChildFlags_None);
+
+		const ComponentRegistry::Factory* firstMatch = nullptr;
+		int matchCount = 0;
 		for (auto& pair : ComponentRegistry::GetAll())
 		{
-			if (ImGui::MenuItem(pair.first.c_str()))
+			std::string name = lower(pair.first);
+			if (!keyword.empty() && name.find(keyword) == std::string::npos) continue;
+
+			if (firstMatch == nullptr) firstMatch = &pair.second;
+			matchCount++;
+
+			// 一番上の候補は Enter で追加されるので、選択中の色にしておく
+			bool isFirst = (matchCount == 1 && !keyword.empty());
+			if (ImGui::Selectable(pair.first.c_str(), isFirst))
 			{
+				UndoSystem::Begin();
 				object->AddComponentInstance(pair.second(object));
+				ImGui::CloseCurrentPopup();
 			}
+		}
+
+		if (matchCount == 0) ImGui::TextDisabled("見つかりません");
+		ImGui::EndChild();
+
+		// Enter：一番上の候補を追加
+		if (enter && firstMatch != nullptr)
+		{
+			UndoSystem::Begin();
+			object->AddComponentInstance((*firstMatch)(object));
+			ImGui::CloseCurrentPopup();
+		}
+
+		ImGui::Separator();
+		// 見つからなければ、入力した名前でスクリプトを作れるようにする
+		std::string createLabel = (search[0] != '\0' && matchCount == 0)
+			? std::string("「") + search + "」という名前でスクリプトを作成..."
+			: std::string("新しいスクリプトを作成...");
+		if (ImGui::Selectable(createLabel.c_str()))
+		{
+			AssetBrowser::StartNewScript(search[0] != '\0' ? search : "NewBehaviour");
+			ImGui::CloseCurrentPopup();
 		}
 		ImGui::EndPopup();
 	}
-
 	ImGui::End();
 }
 
@@ -1234,8 +1641,12 @@ void EditorGUI::FocusObject(unsigned int id)
 		Collider* collider = dynamic_cast<Collider*>(component);
 		if (collider == nullptr) continue;
 
-		Vector3 mn, mx;
-		ColliderBounds(collider->GetShape(), mn, mx);
+		ColliderShape shape = collider->GetShape();
+		Vector3 half(shape.HalfX + shape.RadiusXZ + shape.Radius,
+			shape.HalfY + shape.Radius,
+			shape.HalfZ + shape.RadiusXZ + shape.Radius);
+		Vector3 mn = shape.Center - half;
+		Vector3 mx = shape.Center + half;
 
 		if (!found)
 		{

@@ -9,6 +9,8 @@
 #include "ModelRenderer.h"
 #include "PrimitiveRenderer.h"
 #include "CameraComponent.h"
+#include "SceneGrid.h"
+#include "Console.h"
 #include "ShaderManager.h"
 #include "TextureManager.h"
 #include "Collider.h"
@@ -26,6 +28,7 @@ Scene* Manager::m_NextScene=nullptr;
 std::function<Scene*()> Manager::m_SceneFactory;
 std::function<Scene*()> Manager::m_NextSceneFactory;
 float Manager::m_ChangeSceneTime = 5.0f;
+bool  Manager::m_DrawingSceneView = false;
 
 float Manager::m_DeltaTime = 1.0f / 60.0f;
 
@@ -79,7 +82,8 @@ void Manager::Uninit()
 	}
 
 	ModelRenderer::UnloadAll();
-	PrimitiveRenderer::UnloadAll();	
+	PrimitiveRenderer::UnloadAll();
+	SceneGrid::Uninit();	
 	ShaderManager::Unload();
 	TextureManager::Unload();
 
@@ -96,7 +100,8 @@ void Manager::Update()
 	ImGui::NewFrame();
 	ImGuizmo::BeginFrame();
 
-	ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
+	// 画面全体をドッキング領域にする（初回は EditorGUI が Unity 風の配置を作る）
+	EditorGUI::SetDockSpaceID(ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport()));
 
 	float  dt =GetDeltaTime();
 	Input::Update();
@@ -162,18 +167,36 @@ void Manager::Update()
 		if (CAMERA* camera = GetGameObject<CAMERA>())
 			EditorCamera::InitFrom(camera->GetPosition(), camera->GetTarget());
 	}
-	if (EditorGUI::UseEditorCamera()) EditorCamera::Update(EditorGUI::IsSceneViewHovered());
+	EditorCamera::Update(EditorGUI::IsSceneViewHovered());	// Scene ビューはいつでもエディタカメラ
 
 	EditorGUI::Draw();
 };
 
 void Manager::Draw()
 {
-	// ゲーム画面はシーン用テクスチャに描き、最後に ImGui のシーンビューで表示する
-	Renderer::BeginScene();
+	// Scene ビュー（エディタカメラ）と Game ビュー（ゲームのカメラ）を別々のテクスチャに描く
+	// 表示されていないタブは描かない（重くならないように）
+	if (EditorGUI::IsSceneViewVisible()) DrawWorld(true);
+	if (EditorGUI::IsGameViewVisible())  DrawWorld(false);
+	m_DrawingSceneView = false;
 
-	bool useEditorCamera = EditorGUI::UseEditorCamera() && EditorCamera::IsInitialized();
-	CameraComponent* mainCamera = useEditorCamera ? nullptr : CameraComponent::GetMain();
+	// ここからは画面（バックバッファ）に ImGui を描く
+	Renderer::BeginBackBuffer();
+	Gizmo::Draw();
+
+	ImGui::Render();
+	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+
+	Renderer::End();
+}
+
+void Manager::DrawWorld(bool sceneView)
+{
+	m_DrawingSceneView = sceneView;
+	Renderer::BeginScene(sceneView ? Renderer::VIEW_SCENE : Renderer::VIEW_GAME);
+
+	bool useEditorCamera = sceneView && EditorCamera::IsInitialized();
+	CameraComponent* mainCamera = sceneView ? nullptr : CameraComponent::GetMain();
 
 	// 従来の CAMERA が設定した行列を、エディタカメラかカメラコンポーネントで上書きする
 	auto applyOverride = [&]()
@@ -206,13 +229,9 @@ void Manager::Draw()
 			position = camera->GetPosition();
 		}
 
-		//Z値計算
 		for (GameObject* gameObject : m_GameObjects)
 		{
-			if (gameObject != nullptr)
-			{
-				gameObject->CalcCameraZ(position, forward);
-			}
+			if (gameObject != nullptr) gameObject->CalcCameraZ(position, forward);
 		}
 
 		//Z値でソート
@@ -222,37 +241,30 @@ void Manager::Draw()
 			});
 	}
 
-
 	//レイヤー順で描画
 	for (int layer = 0; layer < 4; layer++)
 	{
+		// 2D（レイヤー3）の前に、Scene ビューだけ床のグリッドを描く
+		if (layer == 3 && useEditorCamera)
+		{
+			EditorCamera::Apply();
+			SceneGrid::Draw(EditorCamera::GetPosition());
+		}
+
 		for (GameObject* gameObject : m_GameObjects)
 		{
-			if (gameObject != nullptr)
+			if (gameObject != nullptr && gameObject->GetLayer() == layer)
 			{
-				if (gameObject->GetLayer() == layer)
-				{
-					gameObject->Draw();
+				gameObject->Draw();
 
-					// ゲームカメラが行列を設定した直後に、エディタカメラ／カメラコンポーネントの行列で上書きする
-					if (dynamic_cast<CAMERA*>(gameObject)) applyOverride();
-				}
+				// ゲームカメラが行列を設定した直後に、エディタカメラ／カメラコンポーネントの行列で上書きする
+				if (dynamic_cast<CAMERA*>(gameObject)) applyOverride();
 			}
 		}
 	}
-	
-	//デバッグ表示（ImGui::Render より前に線をためる）
-	Collider::DrawGizmo();
 
-	// ここからは画面（バックバッファ）に ImGui を描く
-	Renderer::BeginBackBuffer();
-	Gizmo::Draw();
-
-	ImGui::Render();
-	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
-
-
-	Renderer::End();
+	// コライダーの線は Scene ビューにだけ出す（ImGui::Render より前に線をためる）
+	if (sceneView) Collider::DrawGizmo();
 }
 
 void Manager::RemoveGameObject(GameObject* gameobject)

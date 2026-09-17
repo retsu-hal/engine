@@ -5,6 +5,7 @@
 #include "Registry.h"
 #include "JsonUtil.h"
 #include "Profiler.h"	// TypeName
+#include "Console.h"
 #include <typeinfo>
 #include <fstream>
 #include <sstream>
@@ -13,7 +14,11 @@
 
 static void Log(const std::string& text)
 {
-	OutputDebugStringA(("[Scene] " + text + "\n").c_str());
+	// 失敗を表す内容は警告として出す
+	bool warning = text.find("できない") != std::string::npos || text.find("失敗") != std::string::npos
+		|| text.find("見つかりません") != std::string::npos || text.find("開けません") != std::string::npos;
+	if (warning) Console::Add(LogLevel::Warning, "[Scene] " + text);
+	else         Console::Add(LogLevel::Info, "[Scene] " + text);
 }
 
 //=============================================================

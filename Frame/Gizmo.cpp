@@ -61,9 +61,11 @@ void Gizmo::Uninit()
 //=============================================================
 void Gizmo::Draw()
 {
+	// 表示の切り替えはメニューの Window →「ギズモ表示 (F1)」
+
 	CAMERA* camera = Manager::GetGameObject<CAMERA>();
 	ImDrawList* drawList = EditorGUI::GetSceneDrawList();	//シーンビューのウィンドウに描く
-	bool useEditorCamera = EditorGUI::UseEditorCamera() && EditorCamera::IsInitialized();
+	bool useEditorCamera = EditorCamera::IsInitialized();	// 線を描くのは Scene ビューなので、いつもエディタカメラ
 
 	CameraComponent* mainCamera = useEditorCamera ? nullptr : CameraComponent::GetMain();
 

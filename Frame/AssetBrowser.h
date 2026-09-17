@@ -9,7 +9,7 @@ class GameObject;
 class AssetBrowser
 {
 public:
-	enum class AssetType { Folder, Model, AnimationModel, Texture, Audio, Scene, Other };
+	enum class AssetType { Folder, Model, AnimationModel, Texture, Audio, Scene, Script, Other };
 
 	struct Entry
 	{
@@ -23,14 +23,33 @@ private:
 	static std::vector<Entry> m_Entries;
 	static bool               m_NeedRefresh;
 	static float              m_IconSize;
-	static char               m_NewFolderName[128];
-	static bool               m_OpenNewFolderPopup;
+	static std::string        m_SelectedPath;
+
+	// ダイアログで行う操作
+	enum class Action { None, NewFolder, NewScene, NewScript, Rename, Delete };
+	static Action             m_PendingAction;		// 次のフレームでダイアログを開く
+	static std::string        m_ActionPath;
+	static char               m_NameBuffer[128];
+
+	static void DrawContextMenu(const Entry* target);
+	static void DrawDialogs();
+	static void StartAction(Action action, const std::string& path);
 
 	static void Refresh();
 	static void DrawIcon(const Entry& entry, const ImVec2& min, const ImVec2& max);
 
 public:
-	static void Draw();
+	static void Draw(bool* open = nullptr);
+
+	// メニューバーの Assets からも使う
+	static void DrawCreateMenu();
+	static void ShowInExplorer(const std::string& path);
+	static void RequestRefresh() { m_NeedRefresh = true; }
+	static void StartNewScript(const char* name = "NewBehaviour")
+	{
+		StartAction(Action::NewScript, "Script");
+		strncpy_s(m_NameBuffer, name, _TRUNCATE);	// 入力欄に名前を入れておく
+	}	static const std::string& GetCurrentFolder() { return m_CurrentFolder; }
 
 	static AssetType GetType(const std::string& path);
 	static std::string GetStem(const std::string& path);	// フォルダと拡張子を除いた名前

@@ -155,6 +155,9 @@
     <ClCompile Include="Component\BillboardRenderer.cpp" />
     <ClCompile Include="Component\Collider.cpp" />
     <ClCompile Include="Component\CameraComponent.cpp" />
+    <ClCompile Include="Frame\ScriptTool.cpp" />
+    <ClCompile Include="Frame\Console.cpp" />
+    <ClCompile Include="Frame\SceneGrid.cpp" />
     <ClCompile Include="Frame\UndoSystem.cpp" />
     <ClCompile Include="Component\PrimitiveRenderer.cpp" />
     <ClCompile Include="Component\ModelRenderer.cpp" />
@@ -211,6 +214,9 @@
     <ClInclude Include="Component\BillboardRenderer.h" />
     <ClInclude Include="Component\Collider.h" />
     <ClInclude Include="Component\CameraComponent.h" />
+    <ClInclude Include="Frame\ScriptTool.h" />
+    <ClInclude Include="Frame\Console.h" />
+    <ClInclude Include="Frame\SceneGrid.h" />
     <ClInclude Include="Frame\UndoSystem.h" />
     <ClInclude Include="Component\PrimitiveRenderer.h" />
     <ClInclude Include="Component\ModelRenderer.h" />

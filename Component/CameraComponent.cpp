@@ -42,7 +42,7 @@ void CameraComponent::Apply() const
 
 void CameraComponent::Draw()
 {
-	if (!EditorGUI::UseEditorCamera()) return;	// Play 中は枠を出さない
+	if (!Manager::IsDrawingSceneView()) return;	// 枠は Scene ビューにだけ出す
 
 	// 視野の四角すい（遠くまで描くと見づらいので 3m 分だけ）
 	XMMATRIX inverse = XMMatrixInverse(nullptr, GetViewMatrix());

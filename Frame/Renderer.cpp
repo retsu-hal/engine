@@ -27,12 +27,9 @@ ID3D11BlendState*		Renderer::m_BlendState{};
 ID3D11BlendState*		Renderer::m_BlendStateAdd{};
 ID3D11BlendState*		Renderer::m_BlendStateATC{};
 
-ID3D11RenderTargetView*   Renderer::m_SceneRTV{};
-ID3D11ShaderResourceView* Renderer::m_SceneSRV{};
-ID3D11DepthStencilView*   Renderer::m_SceneDSV{};
-
-UINT Renderer::m_BackBufferWidth = 0;
-UINT Renderer::m_BackBufferHeight = 0;
+ID3D11RenderTargetView*   Renderer::m_ViewRTV[2]{};
+ID3D11ShaderResourceView* Renderer::m_ViewSRV[2]{};
+ID3D11DepthStencilView*   Renderer::m_ViewDSV[2]{};
 
 
 
@@ -44,20 +41,11 @@ void Renderer::Init()
 
 	
 
-	// バックバッファはウィンドウのクライアント領域と同じ大きさで作る
-	// （ここがずれると ImGui の描画位置とマウスの判定位置が合わなくなる）
-	RECT clientRect{};
-	GetClientRect(GetWindow(), &clientRect);
-	UINT clientWidth = (UINT)(clientRect.right - clientRect.left);
-	UINT clientHeight = (UINT)(clientRect.bottom - clientRect.top);
-	if (clientWidth == 0)  clientWidth = SCREEN_WIDTH;
-	if (clientHeight == 0) clientHeight = SCREEN_HEIGHT;
-
 	// デバイス、スワップチェーン作成
 	DXGI_SWAP_CHAIN_DESC swapChainDesc{};
 	swapChainDesc.BufferCount = 1;
-	swapChainDesc.BufferDesc.Width = clientWidth;
-	swapChainDesc.BufferDesc.Height = clientHeight;
+	swapChainDesc.BufferDesc.Width = SCREEN_WIDTH;
+	swapChainDesc.BufferDesc.Height = SCREEN_HEIGHT;
 	swapChainDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	swapChainDesc.BufferDesc.RefreshRate.Numerator = 60;
 	swapChainDesc.BufferDesc.RefreshRate.Denominator = 1;
@@ -85,11 +73,42 @@ void Renderer::Init()
 
 
 
-	// レンダーターゲットビューとデプスステンシルビュー作成
-	CreateBackBuffer(clientWidth, clientHeight);
+	// レンダーターゲットビュー作成
+	ID3D11Texture2D* renderTarget{};
+	m_SwapChain->GetBuffer( 0, __uuidof( ID3D11Texture2D ), ( LPVOID* )&renderTarget );
+	m_Device->CreateRenderTargetView( renderTarget, NULL, &m_RenderTargetView );
+	renderTarget->Release();
 
 
-	// シーンビュー用のレンダーターゲット（画面と同じ解像度で作り、ImGui 側で縮小表示する）
+	// デプスステンシルバッファ作成
+	ID3D11Texture2D* depthStencile{};
+	D3D11_TEXTURE2D_DESC textureDesc{};
+	textureDesc.Width = swapChainDesc.BufferDesc.Width;
+	textureDesc.Height = swapChainDesc.BufferDesc.Height;
+	textureDesc.MipLevels = 1;
+	textureDesc.ArraySize = 1;
+	textureDesc.Format = DXGI_FORMAT_D16_UNORM;
+	textureDesc.SampleDesc = swapChainDesc.SampleDesc;
+	textureDesc.Usage = D3D11_USAGE_DEFAULT;
+	textureDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+	textureDesc.CPUAccessFlags = 0;
+	textureDesc.MiscFlags = 0;
+	m_Device->CreateTexture2D(&textureDesc, NULL, &depthStencile);
+
+	// デプスステンシルビュー作成
+	D3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc{};
+	depthStencilViewDesc.Format = textureDesc.Format;
+	depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+	depthStencilViewDesc.Flags = 0;
+	m_Device->CreateDepthStencilView(depthStencile, &depthStencilViewDesc, &m_DepthStencilView);
+	depthStencile->Release();
+
+
+	m_DeviceContext->OMSetRenderTargets(1, &m_RenderTargetView, m_DepthStencilView);
+
+
+	// Scene / Game ビュー用のレンダーターゲット（画面と同じ解像度で作り、ImGui 側で縮小表示する）
+	for (int view = 0; view < 2; view++)
 	{
 		D3D11_TEXTURE2D_DESC desc{};
 		desc.Width = SCREEN_WIDTH;
@@ -103,8 +122,8 @@ void Renderer::Init()
 
 		ID3D11Texture2D* colorTexture{};
 		m_Device->CreateTexture2D(&desc, NULL, &colorTexture);
-		m_Device->CreateRenderTargetView(colorTexture, NULL, &m_SceneRTV);
-		m_Device->CreateShaderResourceView(colorTexture, NULL, &m_SceneSRV);
+		m_Device->CreateRenderTargetView(colorTexture, NULL, &m_ViewRTV[view]);
+		m_Device->CreateShaderResourceView(colorTexture, NULL, &m_ViewSRV[view]);
 		colorTexture->Release();
 
 		desc.Format = DXGI_FORMAT_D16_UNORM;
@@ -112,7 +131,7 @@ void Renderer::Init()
 
 		ID3D11Texture2D* depthTexture{};
 		m_Device->CreateTexture2D(&desc, NULL, &depthTexture);
-		m_Device->CreateDepthStencilView(depthTexture, NULL, &m_SceneDSV);
+		m_Device->CreateDepthStencilView(depthTexture, NULL, &m_ViewDSV[view]);
 		depthTexture->Release();
 	}
 
@@ -122,8 +141,8 @@ void Renderer::Init()
 
 	// ビューポート設定
 	D3D11_VIEWPORT viewport;
-	viewport.Width = (FLOAT)m_BackBufferWidth;
-	viewport.Height = (FLOAT)m_BackBufferHeight;
+	viewport.Width = (FLOAT)SCREEN_WIDTH;
+	viewport.Height = (FLOAT)SCREEN_HEIGHT;
 	viewport.MinDepth = 0.0f;
 	viewport.MaxDepth = 1.0f;
 	viewport.TopLeftX = 0;
@@ -158,8 +177,8 @@ void Renderer::Init()
 	blendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
 	blendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
 	blendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
-	blendDesc.RenderTarget[0].RenderTargetWriteMask =
-		D3D11_COLOR_WRITE_ENABLE_RED | D3D11_COLOR_WRITE_ENABLE_GREEN | D3D11_COLOR_WRITE_ENABLE_BLUE;
+	// アルファは書き込まない（シーン用テクスチャのアルファがクリア時の 1.0 のまま残り、ImGui で表示したときに透けない）
+	blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_RED | D3D11_COLOR_WRITE_ENABLE_GREEN | D3D11_COLOR_WRITE_ENABLE_BLUE;
 
 	m_Device->CreateBlendState( &blendDesc, &m_BlendState );
 
@@ -269,76 +288,6 @@ void Renderer::Init()
 
 
 
-//=============================================================
-// バックバッファ（画面）のレンダーターゲットとデプスを作る
-//=============================================================
-void Renderer::CreateBackBuffer(UINT width, UINT height)
-{
-	m_BackBufferWidth = width;
-	m_BackBufferHeight = height;
-
-	// レンダーターゲットビュー作成
-	ID3D11Texture2D* renderTarget{};
-	m_SwapChain->GetBuffer( 0, __uuidof( ID3D11Texture2D ), ( LPVOID* )&renderTarget );
-	m_Device->CreateRenderTargetView( renderTarget, NULL, &m_RenderTargetView );
-	renderTarget->Release();
-
-
-	// デプスステンシルバッファ作成
-	ID3D11Texture2D* depthStencile{};
-	D3D11_TEXTURE2D_DESC textureDesc{};
-	textureDesc.Width = width;
-	textureDesc.Height = height;
-	textureDesc.MipLevels = 1;
-	textureDesc.ArraySize = 1;
-	textureDesc.Format = DXGI_FORMAT_D16_UNORM;
-	textureDesc.SampleDesc.Count = 1;
-	textureDesc.SampleDesc.Quality = 0;
-	textureDesc.Usage = D3D11_USAGE_DEFAULT;
-	textureDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-	textureDesc.CPUAccessFlags = 0;
-	textureDesc.MiscFlags = 0;
-	m_Device->CreateTexture2D(&textureDesc, NULL, &depthStencile);
-
-	// デプスステンシルビュー作成
-	D3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc{};
-	depthStencilViewDesc.Format = textureDesc.Format;
-	depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-	depthStencilViewDesc.Flags = 0;
-	m_Device->CreateDepthStencilView(depthStencile, &depthStencilViewDesc, &m_DepthStencilView);
-	depthStencile->Release();
-
-
-	m_DeviceContext->OMSetRenderTargets(1, &m_RenderTargetView, m_DepthStencilView);
-}
-
-//=============================================================
-// ウィンドウの大きさが変わったときにバックバッファを作り直す
-// （作り直さないと ImGui はウィンドウの大きさで描いた絵を元の大きさのバックバッファに詰め込むことになり、
-//   引き伸ばされて表示されるのでマウスの位置と当たり判定がずれる）
-//=============================================================
-void Renderer::Resize(UINT width, UINT height)
-{
-	if (m_SwapChain == nullptr) return;					// 初期化前（ウィンドウ生成中の WM_SIZE）
-	if (width == 0 || height == 0) return;				// 最小化中
-	if (width == m_BackBufferWidth && height == m_BackBufferHeight) return;
-
-	// 古いビューを外してから開放する（参照が残っていると ResizeBuffers が失敗する）
-	m_DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
-
-	if (m_RenderTargetView) { m_RenderTargetView->Release(); m_RenderTargetView = nullptr; }
-	if (m_DepthStencilView) { m_DepthStencilView->Release(); m_DepthStencilView = nullptr; }
-
-	if (FAILED(m_SwapChain->ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, 0)))
-	{
-		// 作り直せなかったときは元の大きさで作り直しておく（描画が止まらないように）
-		CreateBackBuffer(m_BackBufferWidth, m_BackBufferHeight);
-		return;
-	}
-
-	CreateBackBuffer(width, height);
-}
-
 void Renderer::Uninit()
 {
 
@@ -350,10 +299,12 @@ void Renderer::Uninit()
 
 
 	m_DeviceContext->ClearState();
-	if (m_SceneRTV) m_SceneRTV->Release();
-	if (m_SceneSRV) m_SceneSRV->Release();
-	if (m_SceneDSV) m_SceneDSV->Release();
-	if (m_DepthStencilView) m_DepthStencilView->Release();
+	for (int view = 0; view < 2; view++)
+	{
+		if (m_ViewRTV[view]) m_ViewRTV[view]->Release();
+		if (m_ViewSRV[view]) m_ViewSRV[view]->Release();
+		if (m_ViewDSV[view]) m_ViewDSV[view]->Release();
+	}
 	m_RenderTargetView->Release();
 	m_SwapChain->Release();
 	m_DeviceContext->Release();
@@ -373,13 +324,13 @@ void Renderer::Begin()
 
 
 
-void Renderer::BeginScene()
+void Renderer::BeginScene(int view)
 {
 	// 前のフレームで ImGui がシーンテクスチャをシェーダーに刺したままだと、書き込み先にできない警告が出るので外す
 	ID3D11ShaderResourceView* nullSRV[1] = { nullptr };
 	m_DeviceContext->PSSetShaderResources(0, 1, nullSRV);
 
-	m_DeviceContext->OMSetRenderTargets(1, &m_SceneRTV, m_SceneDSV);
+	m_DeviceContext->OMSetRenderTargets(1, &m_ViewRTV[view], m_ViewDSV[view]);
 
 	D3D11_VIEWPORT viewport{};
 	viewport.Width = (FLOAT)SCREEN_WIDTH;
@@ -387,21 +338,62 @@ void Renderer::BeginScene()
 	viewport.MaxDepth = 1.0f;
 	m_DeviceContext->RSSetViewports(1, &viewport);
 
-	float clearColor[4] = { 0.0f, 0.5f, 1.0f, 1.0f };
-	m_DeviceContext->ClearRenderTargetView(m_SceneRTV, clearColor);
-	m_DeviceContext->ClearDepthStencilView(m_SceneDSV, D3D11_CLEAR_DEPTH, 1.0f, 0);
+	// Scene ビューは Unity のような灰色、Game ビューは今までの空色
+	float sceneColor[4] = { 0.28f, 0.28f, 0.30f, 1.0f };
+	float gameColor[4] = { 0.0f, 0.5f, 1.0f, 1.0f };
+	m_DeviceContext->ClearRenderTargetView(m_ViewRTV[view], view == VIEW_SCENE ? sceneColor : gameColor);
+	m_DeviceContext->ClearDepthStencilView(m_ViewDSV[view], D3D11_CLEAR_DEPTH, 1.0f, 0);
+}
+
+//=============================================================
+// ウィンドウの大きさに合わせてバックバッファを作り直す
+// （Scene / Game ビューは固定の解像度のテクスチャに描くので、ここでは作り直さない）
+//=============================================================
+void Renderer::Resize(UINT width, UINT height)
+{
+	if (m_SwapChain == nullptr || m_Device == nullptr) return;	// 作る前（CreateWindow 中の WM_SIZE）
+	if (width == 0 || height == 0) return;						// 最小化
+
+	m_DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
+	if (m_RenderTargetView) { m_RenderTargetView->Release(); m_RenderTargetView = nullptr; }
+	if (m_DepthStencilView) { m_DepthStencilView->Release(); m_DepthStencilView = nullptr; }
+
+	m_SwapChain->ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, 0);
+
+	ID3D11Texture2D* backBuffer{};
+	m_SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backBuffer);
+	m_Device->CreateRenderTargetView(backBuffer, NULL, &m_RenderTargetView);
+	backBuffer->Release();
+
+	D3D11_TEXTURE2D_DESC desc{};
+	desc.Width = width;
+	desc.Height = height;
+	desc.MipLevels = 1;
+	desc.ArraySize = 1;
+	desc.Format = DXGI_FORMAT_D16_UNORM;
+	desc.SampleDesc.Count = 1;
+	desc.Usage = D3D11_USAGE_DEFAULT;
+	desc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+	ID3D11Texture2D* depth{};
+	m_Device->CreateTexture2D(&desc, NULL, &depth);
+	m_Device->CreateDepthStencilView(depth, NULL, &m_DepthStencilView);
+	depth->Release();
 }
 
 void Renderer::BeginBackBuffer()
 {
 	m_DeviceContext->OMSetRenderTargets(1, &m_RenderTargetView, m_DepthStencilView);
 
-	// ImGui はウィンドウの大きさ（= バックバッファの大きさ）を基準に描くので、ビューポートもそろえる
-	D3D11_VIEWPORT viewport{};
-	viewport.Width = (FLOAT)m_BackBufferWidth;
-	viewport.Height = (FLOAT)m_BackBufferHeight;
-	viewport.MaxDepth = 1.0f;
-	m_DeviceContext->RSSetViewports(1, &viewport);
+	// バックバッファの大きさに合わせたビューポート（ウィンドウの大きさを変えても ImGui がずれない）
+	ID3D11Texture2D* backBuffer{};
+	if (SUCCEEDED(m_SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backBuffer)))
+	{
+		D3D11_TEXTURE2D_DESC desc;
+		backBuffer->GetDesc(&desc);
+		backBuffer->Release();
+		D3D11_VIEWPORT viewport{ 0.0f, 0.0f, (FLOAT)desc.Width, (FLOAT)desc.Height, 0.0f, 1.0f };
+		m_DeviceContext->RSSetViewports(1, &viewport);
+	}
 
 	float clearColor[4] = { 0.12f, 0.12f, 0.14f, 1.0f };
 	m_DeviceContext->ClearRenderTargetView(m_RenderTargetView, clearColor);
