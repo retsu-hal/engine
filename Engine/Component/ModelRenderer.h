@@ -1,0 +1,92 @@
+﻿#pragma once
+#include "EngineAPI.h"
+
+
+
+// マテリアル構造体
+struct MODEL_MATERIAL
+{
+	char						Name[256];
+	MATERIAL					Material;
+	char						TextureName[256];
+	ID3D11ShaderResourceView*	Texture;
+
+};
+
+
+// 描画サブセット構造体
+struct SUBSET
+{
+	unsigned int	StartIndex;
+	unsigned int	IndexNum;
+	MODEL_MATERIAL	Material;
+};
+
+
+// モデル構造体
+struct MODEL_OBJ
+{
+	VERTEX_3D		*VertexArray;
+	unsigned int	VertexNum;
+
+	unsigned int	*IndexArray;
+	unsigned int	IndexNum;
+
+	SUBSET			*SubsetArray;
+	unsigned int	SubsetNum;
+};
+
+struct MODEL
+{
+	ID3D11Buffer*	VertexBuffer;
+	ID3D11Buffer*	IndexBuffer;
+
+	SUBSET*			SubsetArray;
+	unsigned int	SubsetNum;
+};
+
+
+#include "Component.h"
+#include <string>
+#include <unordered_map>
+
+//前方宣言
+struct ShaderSet;
+
+class ENGINE_API ModelRenderer : public Component
+{
+private:
+
+	static std::unordered_map<std::string, MODEL*> m_ModelPool;
+
+	static void LoadModel(const char *FileName, MODEL *Model);
+	static void LoadObj( const char *FileName, MODEL_OBJ *ModelObj );
+	static void LoadMaterial( const char *FileName, MODEL_MATERIAL **MaterialArray, unsigned int *MaterialNum );
+
+	MODEL* m_Model{};
+
+	bool m_Flash = false;
+
+	const ShaderSet* m_Shader = nullptr;
+
+	std::string m_FileName;	// 保存用
+
+public:
+
+	static void Preload( const char *FileName );
+	static void UnloadAll();
+
+
+	using Component::Component;
+
+	void Load( const char *FileName );
+	void Draw() override;
+
+	void SetFlash(bool Flash) { m_Flash = Flash; }
+
+	void SetShader(const char* vsFile, const char* psFile);
+
+	void OnInspectorGUI() override;
+	void Serialize(nlohmann::json& data) const override;
+	void Deserialize(const nlohmann::json& data) override;
+};

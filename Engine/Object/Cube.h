@@ -1,0 +1,27 @@
+﻿#pragma once
+#include "EngineAPI.h"
+#include "main.h"
+#include "Vector3.h"
+#include "GameObject.h"
+
+class ENGINE_API CUBE : public GameObject
+{
+private:
+	Vector3 m_Velocity;		
+public:
+	// 頂点構造体
+	struct Vertex3D {
+		XMFLOAT3 Position;
+		XMFLOAT3 Normal;
+		XMFLOAT4 Diffuse;
+		XMFLOAT2 TexCoord;
+	};
+	Vector3 m_RotSpeed;
+
+public:
+	void Init() override;
+	void Uninit() override;
+	void Update() override;
+	void Draw() override;
+
+};

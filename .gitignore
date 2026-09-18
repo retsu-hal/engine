@@ -4,7 +4,6 @@ x64/
 x86/
 Debug/
 Release/
-Game/
 *.user
 *.ilk
 *.pdb
@@ -17,9 +16,6 @@ Game/
 *.recipe
 *.exe
 
-# ゲーム用 exe の出力先（Build and Run）
-Build/
-
 # シェーダーはビルド時に生成される
 *.cso
 
@@ -27,4 +23,10 @@ Build/
 imgui.ini
 
 # モデルの .obj は必要なので除外しない
-!asset/**/*.obj
+!**/asset/**/*.obj
+
+# ビルドの出力（GM31Engine.sln 直下）
+/bin/
+/obj/
+# ゲームのビルド結果（File > ビルドして実行）
+/Sample/Build/

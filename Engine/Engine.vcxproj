@@ -1,0 +1,290 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Game|x64">
+      <Configuration>Game</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>17.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{d95abca7-2d2a-4c5f-98e6-30afafbf4a6d}</ProjectGuid>
+    <RootNamespace>Engine</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v145</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v145</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Game|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v145</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Game|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(SolutionDir)'=='' Or '$(SolutionDir)'=='*Undefined*'">
+    <SolutionDir>$(MSBuildThisFileDirectory)..\</SolutionDir>
+  </PropertyGroup>
+  <PropertyGroup>
+    <!-- 出力はソリューション直下の bin\<構成>（Editor.exe・Engine.dll・GameScripts.dll を同じ場所に置く） -->
+    <OutDir>$(SolutionDir)bin\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)obj\$(ProjectName)\$(Configuration)\</IntDir>
+    <TargetName>Engine</TargetName>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>false</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;_WINDOWS;ENGINE_EXPORTS;ENGINE_EDITOR;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Frame;$(ProjectDir)Component;$(ProjectDir)Object;$(ProjectDir)ThirdParty\imgui;$(ProjectDir)ThirdParty\ImGuizmo;$(ProjectDir)ThirdParty;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <DisableSpecificWarnings>4251;4275;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(ProjectDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>/ignore:4099 %(AdditionalOptions)</AdditionalOptions>
+    </Link>
+    <PostBuildEvent>
+      <Command>xcopy /Y /D /Q "$(ProjectDir)assimp-vc143-mt.dll" "$(OutDir)"</Command>
+      <Message>assimp の DLL を出力フォルダにコピー</Message>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>false</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_WINDOWS;ENGINE_EXPORTS;ENGINE_EDITOR;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Frame;$(ProjectDir)Component;$(ProjectDir)Object;$(ProjectDir)ThirdParty\imgui;$(ProjectDir)ThirdParty\ImGuizmo;$(ProjectDir)ThirdParty;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <DisableSpecificWarnings>4251;4275;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalLibraryDirectories>$(ProjectDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>/ignore:4099 %(AdditionalOptions)</AdditionalOptions>
+    </Link>
+    <PostBuildEvent>
+      <Command>xcopy /Y /D /Q "$(ProjectDir)assimp-vc143-mt.dll" "$(OutDir)"</Command>
+      <Message>assimp の DLL を出力フォルダにコピー</Message>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Game|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>false</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_WINDOWS;ENGINE_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Frame;$(ProjectDir)Component;$(ProjectDir)Object;$(ProjectDir)ThirdParty\imgui;$(ProjectDir)ThirdParty\ImGuizmo;$(ProjectDir)ThirdParty;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <DisableSpecificWarnings>4251;4275;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalLibraryDirectories>$(ProjectDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>/ignore:4099 %(AdditionalOptions)</AdditionalOptions>
+    </Link>
+    <PostBuildEvent>
+      <Command>xcopy /Y /D /Q "$(ProjectDir)assimp-vc143-mt.dll" "$(OutDir)"</Command>
+      <Message>assimp の DLL を出力フォルダにコピー</Message>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="Frame\AssetBrowser.cpp" />
+    <ClCompile Include="Frame\Console.cpp" />
+    <ClCompile Include="Frame\EditorCamera.cpp" />
+    <ClCompile Include="Frame\EditorGUI.cpp" />
+    <ClCompile Include="Frame\EngineMain.cpp" />
+    <ClCompile Include="Frame\EnginePaths.cpp" />
+    <ClCompile Include="Frame\GameBuilder.cpp" />
+    <ClCompile Include="Frame\GameObject.cpp" />
+    <ClCompile Include="Frame\Gizmo.cpp" />
+    <ClCompile Include="Frame\Input.cpp" />
+    <ClCompile Include="Frame\Manager.cpp" />
+    <ClCompile Include="Frame\Primitives.cpp" />
+    <ClCompile Include="Frame\Profiler.cpp" />
+    <ClCompile Include="Frame\ProjectSettings.cpp" />
+    <ClCompile Include="Frame\Registry.cpp" />
+    <ClCompile Include="Frame\Renderer.cpp" />
+    <ClCompile Include="Frame\SceneGrid.cpp" />
+    <ClCompile Include="Frame\SceneSerializer.cpp" />
+    <ClCompile Include="Frame\ScriptTool.cpp" />
+    <ClCompile Include="Frame\ShaderManager.cpp" />
+    <ClCompile Include="Frame\TextureManager.cpp" />
+    <ClCompile Include="Frame\UndoSystem.cpp" />
+    <ClCompile Include="Component\AnimationModel.cpp" />
+    <ClCompile Include="Component\Audio.cpp" />
+    <ClCompile Include="Component\BillboardRenderer.cpp" />
+    <ClCompile Include="Component\CameraComponent.cpp" />
+    <ClCompile Include="Component\Collider.cpp" />
+    <ClCompile Include="Component\ModelRenderer.cpp" />
+    <ClCompile Include="Component\PrimitiveRenderer.cpp" />
+    <ClCompile Include="Component\Rigidbody.cpp" />
+    <ClCompile Include="Component\SpriteAnimation.cpp" />
+    <ClCompile Include="Object\Camera.cpp" />
+    <ClCompile Include="Object\Cube.cpp" />
+    <ClCompile Include="Object\Field.cpp" />
+    <ClCompile Include="Object\MeshField.cpp" />
+    <ClCompile Include="Object\Particle.cpp" />
+    <ClCompile Include="Object\Polygon2D.cpp" />
+    <ClCompile Include="Object\Score.cpp" />
+    <ClCompile Include="Object\Shadow.cpp" />
+    <ClCompile Include="Object\Sky.cpp" />
+    <ClCompile Include="ThirdParty\ImGuizmo\ImGuizmo.cpp" />
+    <ClCompile Include="ThirdParty\imgui\imgui.cpp" />
+    <ClCompile Include="ThirdParty\imgui\imgui_demo.cpp" />
+    <ClCompile Include="ThirdParty\imgui\imgui_draw.cpp" />
+    <ClCompile Include="ThirdParty\imgui\imgui_tables.cpp" />
+    <ClCompile Include="ThirdParty\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="ThirdParty\imgui\backends\imgui_impl_dx11.cpp" />
+    <ClCompile Include="ThirdParty\imgui\backends\imgui_impl_win32.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="EngineAPI.h" />
+    <ClInclude Include="main.h" />
+    <ClInclude Include="Frame\AssetBrowser.h" />
+    <ClInclude Include="Frame\Component.h" />
+    <ClInclude Include="Frame\Console.h" />
+    <ClInclude Include="Frame\EditorCamera.h" />
+    <ClInclude Include="Frame\EditorGUI.h" />
+    <ClInclude Include="Frame\EngineMain.h" />
+    <ClInclude Include="Frame\EnginePaths.h" />
+    <ClInclude Include="Frame\GameBuilder.h" />
+    <ClInclude Include="Frame\GameObject.h" />
+    <ClInclude Include="Frame\Gizmo.h" />
+    <ClInclude Include="Frame\Input.h" />
+    <ClInclude Include="Frame\JsonUtil.h" />
+    <ClInclude Include="Frame\Manager.h" />
+    <ClInclude Include="Frame\Primitives.h" />
+    <ClInclude Include="Frame\Profiler.h" />
+    <ClInclude Include="Frame\ProjectSettings.h" />
+    <ClInclude Include="Frame\Registry.h" />
+    <ClInclude Include="Frame\Renderer.h" />
+    <ClInclude Include="Frame\Scene.h" />
+    <ClInclude Include="Frame\SceneGrid.h" />
+    <ClInclude Include="Frame\SceneSerializer.h" />
+    <ClInclude Include="Frame\ScriptTool.h" />
+    <ClInclude Include="Frame\ShaderManager.h" />
+    <ClInclude Include="Frame\TextureManager.h" />
+    <ClInclude Include="Frame\UndoSystem.h" />
+    <ClInclude Include="Frame\Vector3.h" />
+    <ClInclude Include="Component\AnimationModel.h" />
+    <ClInclude Include="Component\Audio.h" />
+    <ClInclude Include="Component\BillboardRenderer.h" />
+    <ClInclude Include="Component\CameraComponent.h" />
+    <ClInclude Include="Component\Collider.h" />
+    <ClInclude Include="Component\ModelRenderer.h" />
+    <ClInclude Include="Component\PrimitiveRenderer.h" />
+    <ClInclude Include="Component\Rigidbody.h" />
+    <ClInclude Include="Component\SpriteAnimation.h" />
+    <ClInclude Include="Object\Camera.h" />
+    <ClInclude Include="Object\Cube.h" />
+    <ClInclude Include="Object\Field.h" />
+    <ClInclude Include="Object\MeshField.h" />
+    <ClInclude Include="Object\Particle.h" />
+    <ClInclude Include="Object\Polygon2D.h" />
+    <ClInclude Include="Object\Score.h" />
+    <ClInclude Include="Object\Shadow.h" />
+    <ClInclude Include="Object\Sky.h" />
+    <ClInclude Include="ThirdParty\ImGuizmo\ImGuizmo.h" />
+    <ClInclude Include="ThirdParty\imgui\imconfig.h" />
+    <ClInclude Include="ThirdParty\imgui\imgui.h" />
+    <ClInclude Include="ThirdParty\imgui\imgui_internal.h" />
+    <ClInclude Include="ThirdParty\imgui\backends\imgui_impl_dx11.h" />
+    <ClInclude Include="ThirdParty\imgui\backends\imgui_impl_win32.h" />
+    <ClInclude Include="ThirdParty\nlohmann\json.hpp" />
+    <ClInclude Include="ThirdParty\nlohmann\json_fwd.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="shader\common.hlsl">
+      <ExcludedFromBuild>true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="shader\SkinVS.hlsl">
+      <ShaderType>Vertex</ShaderType>
+      <ShaderModel>5.0</ShaderModel>
+      <ObjectFileOutput>$(ProjectDir)shader\%(Filename).cso</ObjectFileOutput>
+    </FxCompile>
+    <FxCompile Include="shader\fieldPS.hlsl">
+      <ShaderType>Pixel</ShaderType>
+      <ShaderModel>5.0</ShaderModel>
+      <ObjectFileOutput>$(ProjectDir)shader\%(Filename).cso</ObjectFileOutput>
+    </FxCompile>
+    <FxCompile Include="shader\fieldVS.hlsl">
+      <ShaderType>Vertex</ShaderType>
+      <ShaderModel>5.0</ShaderModel>
+      <ObjectFileOutput>$(ProjectDir)shader\%(Filename).cso</ObjectFileOutput>
+    </FxCompile>
+    <FxCompile Include="shader\litPS.hlsl">
+      <ShaderType>Pixel</ShaderType>
+      <ShaderModel>5.0</ShaderModel>
+      <ObjectFileOutput>$(ProjectDir)shader\%(Filename).cso</ObjectFileOutput>
+    </FxCompile>
+    <FxCompile Include="shader\litVS.hlsl">
+      <ShaderType>Vertex</ShaderType>
+      <ShaderModel>5.0</ShaderModel>
+      <ObjectFileOutput>$(ProjectDir)shader\%(Filename).cso</ObjectFileOutput>
+    </FxCompile>
+    <FxCompile Include="shader\unlitTexturePS.hlsl">
+      <ShaderType>Pixel</ShaderType>
+      <ShaderModel>5.0</ShaderModel>
+      <ObjectFileOutput>$(ProjectDir)shader\%(Filename).cso</ObjectFileOutput>
+    </FxCompile>
+    <FxCompile Include="shader\unlitTextureVS.hlsl">
+      <ShaderType>Vertex</ShaderType>
+      <ShaderModel>5.0</ShaderModel>
+      <ObjectFileOutput>$(ProjectDir)shader\%(Filename).cso</ObjectFileOutput>
+    </FxCompile>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
